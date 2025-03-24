@@ -7,7 +7,7 @@ import GlassCard from '@/components/ui-components/GlassCard';
 import SubTaskList from '@/components/SubTaskList';
 import Badge from '@/components/ui-components/Badge';
 import Navbar from '@/components/Navbar';
-import { ChevronRight, Users, Edit, Trash, Plus } from 'lucide-react';
+import { ChevronRight, Users, Edit, Trash, Plus, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useUser } from '@/contexts/UserContext';
 import { 
@@ -33,6 +33,22 @@ import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator
+} from '@/components/ui/dropdown-menu';
 
 const TaskDetail = () => {
   const { domainName, taskName } = useParams<{ domainName: string; taskName: string }>();
@@ -58,6 +74,10 @@ const TaskDetail = () => {
     man_day_cost: 0,
     role: []
   });
+  
+  // Available roles for dropdown
+  const [availableRoles, setAvailableRoles] = useState<string[]>([]);
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   
   useEffect(() => {
     // Try to get from location state first
@@ -91,8 +111,26 @@ const TaskDetail = () => {
       setTaskDescriptionInput(task.description);
       setTaskManDayCostInput(task.man_day_cost.toString());
       setTaskRolesInput(task.roles.join(', '));
+      
+      // Collect available roles from task and subtasks for the dropdown
+      const roles = new Set<string>(task.roles);
+      task.subtasks.forEach(subtask => {
+        subtask.role.forEach(role => roles.add(role));
+      });
+      
+      // Also add common roles from the domain if available
+      if (domain) {
+        domain.tasks.forEach(t => {
+          t.roles.forEach(role => roles.add(role));
+          t.subtasks.forEach(st => {
+            st.role.forEach(role => roles.add(role));
+          });
+        });
+      }
+      
+      setAvailableRoles(Array.from(roles).sort());
     }
-  }, [task]);
+  }, [task, domain]);
 
   useEffect(() => {
     // Determine if user can edit tasks in this domain
@@ -156,12 +194,12 @@ const TaskDetail = () => {
   const handleAddSubtask = () => {
     if (!domain || !task || !newSubtask.name) return;
     
-    // Create the subtask
+    // Create the subtask with roles from dropdown selection
     const subtask: SubTask = {
       name: newSubtask.name,
       description: newSubtask.description || '',
       man_day_cost: newSubtask.man_day_cost || 0,
-      role: newSubtask.role || []
+      role: selectedRoles
     };
     
     // Update the task with the new subtask
@@ -191,12 +229,21 @@ const TaskDetail = () => {
         man_day_cost: 0,
         role: []
       });
+      setSelectedRoles([]);
       
       toast({
         title: 'Subtask added',
         description: `${subtask.name} has been added to ${task.name}.`
       });
     }
+  };
+  
+  const toggleRole = (role: string) => {
+    setSelectedRoles(current => 
+      current.includes(role)
+        ? current.filter(r => r !== role)
+        : [...current, role]
+    );
   };
   
   if (!domain || !task) {
@@ -392,16 +439,43 @@ const TaskDetail = () => {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="subtask-roles">Required roles (comma-separated)</Label>
-                        <Input 
-                          id="subtask-roles" 
-                          value={newSubtask.role?.join(', ')}
-                          onChange={(e) => setNewSubtask({
-                            ...newSubtask, 
-                            role: e.target.value.split(',').map(r => r.trim()).filter(Boolean)
-                          })}
-                          placeholder="Role 1, Role 2, Role 3"
-                        />
+                        <Label htmlFor="subtask-roles">Required roles</Label>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              className="w-full justify-between"
+                            >
+                              {selectedRoles.length > 0 
+                                ? `${selectedRoles.length} role${selectedRoles.length > 1 ? 's' : ''} selected` 
+                                : 'Select roles'}
+                              <ChevronRight className="h-4 w-4 ml-1 rotate-90 opacity-50" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-56 bg-popover">
+                            <DropdownMenuLabel>Available Roles</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {availableRoles.map((role) => (
+                              <DropdownMenuCheckboxItem
+                                key={role}
+                                checked={selectedRoles.includes(role)}
+                                onCheckedChange={() => toggleRole(role)}
+                              >
+                                {role}
+                              </DropdownMenuCheckboxItem>
+                            ))}
+                            {availableRoles.length === 0 && (
+                              <DropdownMenuItem disabled>No roles available</DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {selectedRoles.map((role) => (
+                            <Badge key={role} variant="primary">
+                              {role}
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
                     </div>
                     <DialogFooter>
