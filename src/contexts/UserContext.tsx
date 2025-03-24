@@ -35,27 +35,27 @@ interface UserContextType {
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
-  const [users, setUsers] = useState<User[]>(DEFAULT_USERS);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  // On component mount, check for saved user in localStorage
-  useEffect(() => {
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-      setCurrentUser(JSON.parse(savedUser));
-      setIsAuthenticated(true);
-    }
-
-    // Load saved users from localStorage if they exist
+  const [users, setUsers] = useState<User[]>(() => {
+    // Initialize users from localStorage if available
     const savedUsers = localStorage.getItem('users');
-    if (savedUsers) {
-      setUsers(JSON.parse(savedUsers));
-    } else {
-      // Initialize localStorage with default users
-      localStorage.setItem('users', JSON.stringify(DEFAULT_USERS));
-    }
-  }, []);
+    return savedUsers ? JSON.parse(savedUsers) : DEFAULT_USERS;
+  });
+  
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    // Initialize currentUser from localStorage if available
+    const savedUser = localStorage.getItem('currentUser');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+  
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    // Initialize authentication state based on currentUser
+    return localStorage.getItem('currentUser') !== null;
+  });
+
+  // Sync users with localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('users', JSON.stringify(users));
+  }, [users]);
 
   const login = (email: string): boolean => {
     const user = users.find(u => u.email === email);

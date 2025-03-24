@@ -2,7 +2,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { ArrowLeft, LogOut, User, Users } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useUser } from '@/contexts/UserContext';
 import { 
   DropdownMenu,
@@ -54,7 +54,6 @@ const Navbar = ({ className }: NavbarProps) => {
         <div className="flex items-center">
           <nav className="hidden md:flex items-center space-x-1 mr-4">
             <NavLink to="/" exact>Dashboard</NavLink>
-            <NavLink to="/domains">Domains</NavLink>
             <NavLink to="/json-view">JSON View</NavLink>
             {isAdmin && <NavLink to="/users">Users</NavLink>}
           </nav>
@@ -105,15 +104,15 @@ const NavLink = ({ children, to, exact = false }: NavLinkProps) => {
   const isActive = exact ? location.pathname === to : location.pathname.startsWith(to);
   
   return (
-    <a 
-      href={to} 
+    <Link 
+      to={to} 
       className={cn(
         "px-4 py-2 rounded-md text-sm font-medium transition-colors",
         isActive ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
       )}
     >
       {children}
-    </a>
+    </Link>
   );
 };
 

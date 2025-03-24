@@ -15,8 +15,6 @@ import UserManagement from "./pages/UserManagement";
 
 const queryClient = new QueryClient();
 
-// Fix the issue with TooltipProvider by moving it inside individual components
-// that need it, rather than wrapping the entire app
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <UserProvider>
