@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -55,6 +56,11 @@ const UserManagement = () => {
     role: UserRole.Regular,
   });
 
+  // Refresh user list
+  const refreshUserList = () => {
+    setUsers(getAllUsers());
+  };
+
   // Check if user has admin permissions
   if (!isAdmin) {
     return (
@@ -80,7 +86,7 @@ const UserManagement = () => {
     };
 
     addUser(newUser);
-    setUsers(getAllUsers());
+    refreshUserList(); // Refresh the user list immediately
     setIsAddDialogOpen(false);
     setFormData({ name: '', email: '', role: UserRole.Regular });
     
@@ -102,7 +108,7 @@ const UserManagement = () => {
     };
 
     updateUser(updatedUser);
-    setUsers(getAllUsers());
+    refreshUserList(); // Refresh the user list immediately
     setIsEditDialogOpen(false);
     setSelectedUser(null);
     
@@ -116,7 +122,7 @@ const UserManagement = () => {
     if (!selectedUser) return;
     
     deleteUser(selectedUser.id);
-    setUsers(getAllUsers());
+    refreshUserList(); // Refresh the user list immediately
     setIsDeleteDialogOpen(false);
     setSelectedUser(null);
     
@@ -212,6 +218,9 @@ const UserManagement = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add New User</DialogTitle>
+            <DialogDescription>
+              Create a new user account with appropriate permissions.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -264,6 +273,9 @@ const UserManagement = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update this user's information and role.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
