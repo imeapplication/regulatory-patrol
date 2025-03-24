@@ -101,6 +101,10 @@ const DomainDetail = () => {
 
   const canManageTasks = isAdmin || isDomainAccountableFor(domainName || '');
 
+  const onSelectTask = (task: Task) => {
+    navigate(`/domain/${domainName}/task/${task.name}`);
+  };
+
   return (
     <>
       <Navbar />
@@ -124,7 +128,7 @@ const DomainDetail = () => {
                     <SelectValue placeholder="Assign Domain Accountable" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {accountableUsers.map((user) => (
                       <SelectItem key={user.id} value={user.id}>
                         {user.name}
@@ -182,8 +186,7 @@ const DomainDetail = () => {
           
           <TaskList 
             tasks={domain.tasks} 
-            domainName={domain.name} 
-            editable={canManageTasks} 
+            onSelectTask={onSelectTask}
           />
         </div>
       </div>
