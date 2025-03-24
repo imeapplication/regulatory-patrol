@@ -1,4 +1,3 @@
-
 import { ComplianceData } from "../types/compliance";
 
 export const complianceData: ComplianceData = {
@@ -9,6 +8,8 @@ export const complianceData: ComplianceData = {
         "name": "GDPR",
         "description": "Compliance with data protection laws, including appointing a DPO, securing supplier and employee data, and implementing breach protocols. Align with CNIL guidelines for HR and customer data.",
         "man_day_cost": 85,
+        "accountableRole": "DPO",
+        "managerRole": "IT Director",
         "tasks": [
           {
             "name": "Data Mapping & Inventory",
@@ -68,6 +69,8 @@ export const complianceData: ComplianceData = {
         "name": "Environmental Compliance",
         "description": "Align with EU Production Sustainability Directives, REACH, and French waste management rules. Monitor carbon footprint and hazardous material use in manufacturing.",
         "man_day_cost": 95,
+        "accountableRole": "Environmental Officer",
+        "managerRole": "Operations Director",
         "tasks": [
           {
             "name": "Waste Management System",
@@ -115,6 +118,8 @@ export const complianceData: ComplianceData = {
         "name": "Anti-Corruption & Bribery",
         "description": "Implement Sapin II compliance program, including supplier due diligence and gift policies.",
         "man_day_cost": 65,
+        "accountableRole": "Compliance Officer",
+        "managerRole": "Legal Director",
         "tasks": [
           {
             "name": "Risk Assessment",
@@ -162,6 +167,8 @@ export const complianceData: ComplianceData = {
         "name": "Taxation & Financial Reporting",
         "description": "Ensure compliance with French tax code (Article 209) and IFRS. Manage R&D credit claims for parts innovation.",
         "man_day_cost": 80,
+        "accountableRole": "CFO",
+        "managerRole": "Finance Manager",
         "tasks": [
           {
             "name": "R&D Tax Credit Optimization",
@@ -209,6 +216,8 @@ export const complianceData: ComplianceData = {
         "name": "Product Safety & Standards",
         "description": "Comply with EU Machinery Directive and ISO standards for bicycle components. Maintain CE marking for all applicable parts.",
         "man_day_cost": 70,
+        "accountableRole": "Quality Director",
+        "managerRole": "R&D Manager",
         "tasks": [
           {
             "name": "CE Marking Compliance",
