@@ -78,6 +78,7 @@ const TaskDetail = () => {
           </div>
           
           <GlassCard className="mb-8 animate-slide-down">
+            <h2 className="text-lg text-muted-foreground font-medium mb-1">Task</h2>
             <h1 className="text-2xl font-semibold">{task.name}</h1>
             <p className="mt-2 text-muted-foreground">{task.description}</p>
             
