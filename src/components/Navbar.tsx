@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, LogOut, User } from 'lucide-react';
+import { ArrowLeft, LogOut, User, Users } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useUser } from '@/contexts/UserContext';
 import { 
@@ -56,6 +56,7 @@ const Navbar = ({ className }: NavbarProps) => {
             <NavLink to="/" exact>Dashboard</NavLink>
             <NavLink to="/domains">Domains</NavLink>
             <NavLink to="/json-view">JSON View</NavLink>
+            {isAdmin && <NavLink to="/users">Users</NavLink>}
           </nav>
           
           {currentUser && (
@@ -74,6 +75,12 @@ const Navbar = ({ className }: NavbarProps) => {
                   <div className="text-xs font-semibold mt-1">{currentUser.role}</div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                {isAdmin && (
+                  <DropdownMenuItem onClick={() => navigate('/users')}>
+                    <Users className="w-4 h-4 mr-2" />
+                    Manage Users
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="w-4 h-4 mr-2" />
                   Logout

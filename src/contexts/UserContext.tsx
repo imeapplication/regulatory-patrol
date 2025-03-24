@@ -26,11 +26,16 @@ interface UserContextType {
   logout: () => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  getAllUsers: () => User[];
+  addUser: (user: User) => void;
+  updateUser: (user: User) => void;
+  deleteUser: (userId: string) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
+  const [users, setUsers] = useState<User[]>(DEFAULT_USERS);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
@@ -41,10 +46,19 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       setCurrentUser(JSON.parse(savedUser));
       setIsAuthenticated(true);
     }
+
+    // Load saved users from localStorage if they exist
+    const savedUsers = localStorage.getItem('users');
+    if (savedUsers) {
+      setUsers(JSON.parse(savedUsers));
+    } else {
+      // Initialize localStorage with default users
+      localStorage.setItem('users', JSON.stringify(DEFAULT_USERS));
+    }
   }, []);
 
   const login = (email: string): boolean => {
-    const user = DEFAULT_USERS.find(u => u.email === email);
+    const user = users.find(u => u.email === email);
     if (user) {
       setCurrentUser(user);
       setIsAuthenticated(true);
@@ -60,10 +74,50 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     localStorage.removeItem('currentUser');
   };
 
+  const getAllUsers = (): User[] => {
+    return users;
+  };
+
+  const addUser = (user: User) => {
+    const newUsers = [...users, user];
+    setUsers(newUsers);
+    localStorage.setItem('users', JSON.stringify(newUsers));
+  };
+
+  const updateUser = (updatedUser: User) => {
+    const newUsers = users.map(user => 
+      user.id === updatedUser.id ? updatedUser : user
+    );
+    setUsers(newUsers);
+    localStorage.setItem('users', JSON.stringify(newUsers));
+    
+    // If the current user was updated, update the currentUser state
+    if (currentUser && currentUser.id === updatedUser.id) {
+      setCurrentUser(updatedUser);
+      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+    }
+  };
+
+  const deleteUser = (userId: string) => {
+    const newUsers = users.filter(user => user.id !== userId);
+    setUsers(newUsers);
+    localStorage.setItem('users', JSON.stringify(newUsers));
+  };
+
   const isAdmin = currentUser?.role === UserRole.Administrator;
 
   return (
-    <UserContext.Provider value={{ currentUser, login, logout, isAuthenticated, isAdmin }}>
+    <UserContext.Provider value={{ 
+      currentUser, 
+      login, 
+      logout, 
+      isAuthenticated, 
+      isAdmin,
+      getAllUsers,
+      addUser,
+      updateUser,
+      deleteUser 
+    }}>
       {children}
     </UserContext.Provider>
   );

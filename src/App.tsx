@@ -11,6 +11,7 @@ import DomainDetail from "./pages/DomainDetail";
 import TaskDetail from "./pages/TaskDetail";
 import JsonView from "./pages/JsonView";
 import NotFound from "./pages/NotFound";
+import UserManagement from "./pages/UserManagement";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +54,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <JsonView />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/users" 
+            element={
+              <ProtectedRoute requireAdmin={true}>
+                <UserManagement />
               </ProtectedRoute>
             } 
           />
