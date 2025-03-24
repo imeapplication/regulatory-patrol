@@ -2,19 +2,61 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { complianceData } from '@/data/complianceData';
-import { Domain, Task } from '@/types/compliance';
+import { Domain, Task, SubTask } from '@/types/compliance';
 import GlassCard from '@/components/ui-components/GlassCard';
 import SubTaskList from '@/components/SubTaskList';
 import Badge from '@/components/ui-components/Badge';
 import Navbar from '@/components/Navbar';
-import { ChevronRight, Users } from 'lucide-react';
+import { ChevronRight, Users, Edit, Trash, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useUser } from '@/contexts/UserContext';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter,
+  DialogTrigger
+} from '@/components/ui/dialog';
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 const TaskDetail = () => {
   const { domainName, taskName } = useParams<{ domainName: string; taskName: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const { toast } = useToast();
+  const { isAdmin } = useUser();
   const [domain, setDomain] = useState<Domain | null>(null);
   const [task, setTask] = useState<Task | null>(null);
+  
+  // Task editor state
+  const [editTask, setEditTask] = useState<Task | null>(null);
+  const [taskNameInput, setTaskNameInput] = useState('');
+  const [taskDescriptionInput, setTaskDescriptionInput] = useState('');
+  const [taskManDayCostInput, setTaskManDayCostInput] = useState('0');
+  const [taskRolesInput, setTaskRolesInput] = useState('');
+  
+  // Subtask editor state
+  const [newSubtask, setNewSubtask] = useState<Partial<SubTask>>({
+    name: '',
+    description: '',
+    man_day_cost: 0,
+    role: []
+  });
   
   useEffect(() => {
     // Try to get from location state first
@@ -39,6 +81,114 @@ const TaskDetail = () => {
       }
     }
   }, [domainName, taskName, location.state]);
+
+  useEffect(() => {
+    if (task) {
+      // Initialize editor state
+      setEditTask(task);
+      setTaskNameInput(task.name);
+      setTaskDescriptionInput(task.description);
+      setTaskManDayCostInput(task.man_day_cost.toString());
+      setTaskRolesInput(task.roles.join(', '));
+    }
+  }, [task]);
+
+  const handleDeleteTask = () => {
+    if (!domain || !task) return;
+    
+    // In a real app, you would make an API call here
+    // For now, we'll just simulate it by updating the local data
+    const updatedDomain = { ...domain };
+    updatedDomain.tasks = domain.tasks.filter(t => t.name !== task.name);
+    
+    // Update domain's man_day_cost
+    updatedDomain.man_day_cost -= task.man_day_cost;
+    
+    toast({
+      title: 'Task deleted',
+      description: `${task.name} has been removed from ${domain.name}.`
+    });
+    
+    // Navigate back to domain detail
+    navigate(`/domain/${encodeURIComponent(domain.name)}`, { state: { domain: updatedDomain } });
+  };
+
+  const handleUpdateTask = () => {
+    if (!domain || !task) return;
+    
+    const updatedTask: Task = {
+      name: taskNameInput,
+      description: taskDescriptionInput,
+      man_day_cost: parseFloat(taskManDayCostInput) || 0,
+      roles: taskRolesInput.split(',').map(role => role.trim()).filter(Boolean),
+      subtasks: task.subtasks
+    };
+    
+    // Update in the domain
+    const updatedDomain = { ...domain };
+    const taskIndex = updatedDomain.tasks.findIndex(t => t.name === task.name);
+    
+    if (taskIndex !== -1) {
+      // Update domain's man_day_cost
+      updatedDomain.man_day_cost = updatedDomain.man_day_cost - task.man_day_cost + updatedTask.man_day_cost;
+      
+      updatedDomain.tasks[taskIndex] = updatedTask;
+      
+      setDomain(updatedDomain);
+      setTask(updatedTask);
+      
+      toast({
+        title: 'Task updated',
+        description: `${updatedTask.name} has been updated.`
+      });
+    }
+  };
+
+  const handleAddSubtask = () => {
+    if (!domain || !task || !newSubtask.name) return;
+    
+    // Create the subtask
+    const subtask: SubTask = {
+      name: newSubtask.name,
+      description: newSubtask.description || '',
+      man_day_cost: newSubtask.man_day_cost || 0,
+      role: newSubtask.role || []
+    };
+    
+    // Update the task with the new subtask
+    const updatedTask = { ...task };
+    updatedTask.subtasks = [...updatedTask.subtasks, subtask];
+    
+    // Update task's man_day_cost
+    updatedTask.man_day_cost += subtask.man_day_cost;
+    
+    // Update in the domain
+    const updatedDomain = { ...domain };
+    const taskIndex = updatedDomain.tasks.findIndex(t => t.name === task.name);
+    
+    if (taskIndex !== -1) {
+      updatedDomain.tasks[taskIndex] = updatedTask;
+      
+      // Update domain's man_day_cost
+      updatedDomain.man_day_cost += subtask.man_day_cost;
+      
+      setDomain(updatedDomain);
+      setTask(updatedTask);
+      
+      // Reset the new subtask form
+      setNewSubtask({
+        name: '',
+        description: '',
+        man_day_cost: 0,
+        role: []
+      });
+      
+      toast({
+        title: 'Subtask added',
+        description: `${subtask.name} has been added to ${task.name}.`
+      });
+    }
+  };
   
   if (!domain || !task) {
     return (
@@ -77,7 +227,89 @@ const TaskDetail = () => {
             <span className="font-medium text-foreground">{task.name}</span>
           </div>
           
-          <h2 className="text-xl font-medium mb-4">Task</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-medium">Task</h2>
+            
+            {isAdmin && (
+              <div className="flex space-x-2">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Edit className="w-4 h-4 mr-1" /> Edit
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Edit Task</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Name</Label>
+                        <Input 
+                          id="name" 
+                          value={taskNameInput}
+                          onChange={(e) => setTaskNameInput(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="description">Description</Label>
+                        <Textarea 
+                          id="description" 
+                          value={taskDescriptionInput}
+                          onChange={(e) => setTaskDescriptionInput(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="man_day_cost">Estimated effort (man-days)</Label>
+                        <Input 
+                          id="man_day_cost" 
+                          type="number" 
+                          min="0" 
+                          step="0.5"
+                          value={taskManDayCostInput}
+                          onChange={(e) => setTaskManDayCostInput(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="roles">Required roles (comma-separated)</Label>
+                        <Input 
+                          id="roles" 
+                          value={taskRolesInput}
+                          onChange={(e) => setTaskRolesInput(e.target.value)}
+                          placeholder="Role 1, Role 2, Role 3"
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button onClick={handleUpdateTask}>Save changes</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+                
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm">
+                      <Trash className="w-4 h-4 mr-1" /> Delete
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently delete the task "{task.name}" and all its subtasks.
+                        This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeleteTask}>Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            )}
+          </div>
+          
           <GlassCard className="mb-8 animate-slide-down">
             <h1 className="text-2xl font-semibold">{task.name}</h1>
             <p className="mt-2 text-muted-foreground">{task.description}</p>
@@ -105,7 +337,71 @@ const TaskDetail = () => {
           </GlassCard>
           
           <div className="mb-6">
-            <h2 className="text-xl font-medium mb-4">Subtasks</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-medium">Subtasks</h2>
+              
+              {isAdmin && (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Plus className="w-4 h-4 mr-1" /> Add Subtask
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add New Subtask</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="subtask-name">Name</Label>
+                        <Input 
+                          id="subtask-name" 
+                          value={newSubtask.name}
+                          onChange={(e) => setNewSubtask({...newSubtask, name: e.target.value})}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="subtask-description">Description</Label>
+                        <Textarea 
+                          id="subtask-description" 
+                          value={newSubtask.description}
+                          onChange={(e) => setNewSubtask({...newSubtask, description: e.target.value})}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="subtask-man_day_cost">Estimated effort (man-days)</Label>
+                        <Input 
+                          id="subtask-man_day_cost" 
+                          type="number" 
+                          min="0" 
+                          step="0.5"
+                          value={newSubtask.man_day_cost}
+                          onChange={(e) => setNewSubtask({
+                            ...newSubtask, 
+                            man_day_cost: parseFloat(e.target.value) || 0
+                          })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="subtask-roles">Required roles (comma-separated)</Label>
+                        <Input 
+                          id="subtask-roles" 
+                          value={newSubtask.role?.join(', ')}
+                          onChange={(e) => setNewSubtask({
+                            ...newSubtask, 
+                            role: e.target.value.split(',').map(r => r.trim()).filter(Boolean)
+                          })}
+                          placeholder="Role 1, Role 2, Role 3"
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button onClick={handleAddSubtask}>Add Subtask</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              )}
+            </div>
             <SubTaskList subtasks={task.subtasks} />
           </div>
         </div>

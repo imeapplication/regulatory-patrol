@@ -1,8 +1,19 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, LogOut, User } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useUser } from '@/contexts/UserContext';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 interface NavbarProps {
   className?: string;
@@ -11,7 +22,18 @@ interface NavbarProps {
 const Navbar = ({ className }: NavbarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { currentUser, logout, isAdmin } = useUser();
+  const { toast } = useToast();
   const showBackButton = location.pathname !== '/';
+  
+  const handleLogout = () => {
+    logout();
+    toast({
+      title: 'Logged out',
+      description: 'You have been logged out successfully'
+    });
+    navigate('/login');
+  };
   
   return (
     <header className={cn("fixed top-0 left-0 right-0 z-40 border-b border-gray-200 bg-white/80 backdrop-blur-md", className)}>
@@ -29,11 +51,37 @@ const Navbar = ({ className }: NavbarProps) => {
           <h1 className="text-xl font-medium">Regulatory Patrol</h1>
         </div>
         
-        <nav className="hidden md:flex items-center space-x-1">
-          <NavLink to="/" exact>Dashboard</NavLink>
-          <NavLink to="/domains">Domains</NavLink>
-          <NavLink to="/json-view">JSON View</NavLink>
-        </nav>
+        <div className="flex items-center">
+          <nav className="hidden md:flex items-center space-x-1 mr-4">
+            <NavLink to="/" exact>Dashboard</NavLink>
+            <NavLink to="/domains">Domains</NavLink>
+            <NavLink to="/json-view">JSON View</NavLink>
+          </nav>
+          
+          {currentUser && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="ml-2">
+                  <User className="w-4 h-4 mr-2" />
+                  {currentUser.name}
+                  {isAdmin && <span className="ml-2 text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">Admin</span>}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>
+                  <div>{currentUser.name}</div>
+                  <div className="text-xs text-muted-foreground">{currentUser.email}</div>
+                  <div className="text-xs font-semibold mt-1">{currentUser.role}</div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
       </div>
     </header>
   );
