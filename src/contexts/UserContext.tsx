@@ -17,6 +17,16 @@ const DEFAULT_USERS = [
     email: "manager@example.com",
     role: UserRole.DomainManager,
     permissions: getRolePermissions(UserRole.DomainManager)
+  },
+  {
+    id: "3",
+    name: "Domain Accountable",
+    email: "accountable@example.com",
+    role: UserRole.DomainAccountable,
+    permissions: {
+      ...getRolePermissions(UserRole.DomainAccountable),
+      accountableDomains: []
+    }
   }
 ];
 
@@ -30,6 +40,9 @@ interface UserContextType {
   addUser: (user: User) => void;
   updateUser: (user: User) => void;
   deleteUser: (userId: string) => void;
+  assignDomainToAccountable: (userId: string, domainName: string) => void;
+  removeDomainFromAccountable: (userId: string, domainName: string) => void;
+  isDomainAccountableFor: (domainName: string) => boolean;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -104,6 +117,56 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     localStorage.setItem('users', JSON.stringify(newUsers));
   };
 
+  const assignDomainToAccountable = (userId: string, domainName: string) => {
+    const userToUpdate = users.find(user => user.id === userId);
+    
+    if (userToUpdate && userToUpdate.role === UserRole.DomainAccountable) {
+      const accountableDomains = userToUpdate.permissions.accountableDomains || [];
+      
+      // Only add if not already assigned
+      if (!accountableDomains.includes(domainName)) {
+        const updatedUser = {
+          ...userToUpdate,
+          permissions: {
+            ...userToUpdate.permissions,
+            accountableDomains: [...accountableDomains, domainName]
+          }
+        };
+        
+        updateUser(updatedUser);
+      }
+    }
+  };
+
+  const removeDomainFromAccountable = (userId: string, domainName: string) => {
+    const userToUpdate = users.find(user => user.id === userId);
+    
+    if (userToUpdate && userToUpdate.role === UserRole.DomainAccountable) {
+      const accountableDomains = userToUpdate.permissions.accountableDomains || [];
+      
+      if (accountableDomains.includes(domainName)) {
+        const updatedUser = {
+          ...userToUpdate,
+          permissions: {
+            ...userToUpdate.permissions,
+            accountableDomains: accountableDomains.filter(domain => domain !== domainName)
+          }
+        };
+        
+        updateUser(updatedUser);
+      }
+    }
+  };
+
+  const isDomainAccountableFor = (domainName: string): boolean => {
+    if (!currentUser || currentUser.role !== UserRole.DomainAccountable) {
+      return false;
+    }
+    
+    const accountableDomains = currentUser.permissions.accountableDomains || [];
+    return accountableDomains.includes(domainName);
+  };
+
   const isAdmin = currentUser?.role === UserRole.Administrator;
 
   return (
@@ -116,7 +179,10 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       getAllUsers,
       addUser,
       updateUser,
-      deleteUser 
+      deleteUser,
+      assignDomainToAccountable,
+      removeDomainFromAccountable,
+      isDomainAccountableFor
     }}>
       {children}
     </UserContext.Provider>

@@ -12,6 +12,7 @@ import TaskDetail from "./pages/TaskDetail";
 import JsonView from "./pages/JsonView";
 import NotFound from "./pages/NotFound";
 import UserManagement from "./pages/UserManagement";
+import DomainAllocation from "./pages/DomainAllocation";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,14 @@ const App = () => (
             element={
               <ProtectedRoute requireAdmin={true}>
                 <UserManagement />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/domain-allocation" 
+            element={
+              <ProtectedRoute requireAdmin={true}>
+                <DomainAllocation />
               </ProtectedRoute>
             } 
           />

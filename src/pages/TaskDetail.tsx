@@ -39,9 +39,10 @@ const TaskDetail = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { isAdmin } = useUser();
+  const { isAdmin, isDomainAccountableFor } = useUser();
   const [domain, setDomain] = useState<Domain | null>(null);
   const [task, setTask] = useState<Task | null>(null);
+  const [canEditTasks, setCanEditTasks] = useState(false);
   
   // Task editor state
   const [editTask, setEditTask] = useState<Task | null>(null);
@@ -92,6 +93,14 @@ const TaskDetail = () => {
       setTaskRolesInput(task.roles.join(', '));
     }
   }, [task]);
+
+  useEffect(() => {
+    // Determine if user can edit tasks in this domain
+    if (domainName) {
+      const decodedDomainName = decodeURIComponent(domainName);
+      setCanEditTasks(isAdmin || isDomainAccountableFor(decodedDomainName));
+    }
+  }, [domainName, isAdmin, isDomainAccountableFor]);
 
   const handleDeleteTask = () => {
     if (!domain || !task) return;
@@ -230,7 +239,7 @@ const TaskDetail = () => {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-medium">Task</h2>
             
-            {isAdmin && (
+            {canEditTasks && (
               <div className="flex space-x-2">
                 <Dialog>
                   <DialogTrigger asChild>
@@ -340,7 +349,7 @@ const TaskDetail = () => {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-medium">Subtasks</h2>
               
-              {isAdmin && (
+              {canEditTasks && (
                 <Dialog>
                   <DialogTrigger asChild>
                     <Button variant="outline" size="sm">
