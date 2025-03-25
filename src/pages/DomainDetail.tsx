@@ -6,7 +6,7 @@ import { Domain, Task, UserRole } from '@/types/compliance';
 import Navbar from '@/components/Navbar';
 import TaskList from '@/components/TaskList';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Plus } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
@@ -18,10 +18,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import TaskForm from '@/components/TaskForm';
 
 const DomainDetail = () => {
   const { domainName } = useParams<{ domainName: string }>();
@@ -32,6 +35,7 @@ const DomainDetail = () => {
   const [domain, setDomain] = useState<Domain | null>(null);
   const [accountableUsers, setAccountableUsers] = useState<{ id: string; name: string }[]>([]);
   const [assignedAccountableId, setAssignedAccountableId] = useState<string>('');
+  const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
 
   useEffect(() => {
     // Find the domain by name
@@ -64,7 +68,7 @@ const DomainDetail = () => {
     }
     
     // If a new user is selected (not "None"), assign the domain
-    if (userId) {
+    if (userId !== "none") {
       assignDomainToAccountable(userId, domainName || '');
       setAssignedAccountableId(userId);
       
@@ -80,6 +84,29 @@ const DomainDetail = () => {
         title: 'Domain Accountable Removed',
         description: `No user is accountable for ${domainName} now`,
       });
+    }
+  };
+
+  const handleTaskCreated = (newTask: Task) => {
+    if (domain) {
+      // Create a copy of the domain with the new task added
+      const updatedDomain: Domain = {
+        ...domain,
+        tasks: [...domain.tasks, newTask]
+      };
+      
+      // Update the domain in the state
+      setDomain(updatedDomain);
+      
+      // Close the dialog
+      setIsTaskDialogOpen(false);
+      
+      // Find the domain index in the regulations data
+      const domainIndex = complianceData.regulations.domains.findIndex(d => d.name === domainName);
+      if (domainIndex !== -1) {
+        // Update the domain in the actual data source
+        complianceData.regulations.domains[domainIndex] = updatedDomain;
+      }
     }
   };
 
@@ -170,17 +197,23 @@ const DomainDetail = () => {
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold">Tasks</h2>
             {canManageTasks && (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button size="sm">Add Task</Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80 p-0">
-                  {/* Task creation form would go here */}
-                  <div className="p-4">
-                    <p>Task creation functionality will be implemented later</p>
-                  </div>
-                </PopoverContent>
-              </Popover>
+              <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm">
+                    <Plus className="mr-1" />
+                    Add Task
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Add New Task</DialogTitle>
+                  </DialogHeader>
+                  <TaskForm 
+                    onTaskCreated={handleTaskCreated}
+                    onCancel={() => setIsTaskDialogOpen(false)}
+                  />
+                </DialogContent>
+              </Dialog>
             )}
           </div>
           
