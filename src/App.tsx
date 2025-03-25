@@ -13,6 +13,7 @@ import JsonView from "./pages/JsonView";
 import NotFound from "./pages/NotFound";
 import UserManagement from "./pages/UserManagement";
 import DomainAllocation from "./pages/DomainAllocation";
+import UserTimeline from "./pages/UserTimeline";
 
 const queryClient = new QueryClient();
 
@@ -69,6 +70,14 @@ const App = () => (
             element={
               <ProtectedRoute requireAdmin={true}>
                 <DomainAllocation />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/user-timeline" 
+            element={
+              <ProtectedRoute>
+                <UserTimeline />
               </ProtectedRoute>
             } 
           />

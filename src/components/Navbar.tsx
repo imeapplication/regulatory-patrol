@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, LogOut, User, Users } from 'lucide-react';
+import { ArrowLeft, LogOut, User, Users, Clock } from 'lucide-react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useUser } from '@/contexts/UserContext';
 import { 
@@ -55,6 +55,7 @@ const Navbar = ({ className }: NavbarProps) => {
           <nav className="hidden md:flex items-center space-x-1 mr-4">
             <NavLink to="/" exact>Dashboard</NavLink>
             <NavLink to="/json-view">JSON View</NavLink>
+            <NavLink to="/user-timeline">User Timeline</NavLink>
             {isAdmin && <NavLink to="/users">Users</NavLink>}
           </nav>
           
@@ -74,6 +75,10 @@ const Navbar = ({ className }: NavbarProps) => {
                   <div className="text-xs font-semibold mt-1">{currentUser.role}</div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/user-timeline')}>
+                  <Clock className="w-4 h-4 mr-2" />
+                  User Timeline
+                </DropdownMenuItem>
                 {isAdmin && (
                   <DropdownMenuItem onClick={() => navigate('/users')}>
                     <Users className="w-4 h-4 mr-2" />
