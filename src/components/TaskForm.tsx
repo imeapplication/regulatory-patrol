@@ -13,9 +13,18 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from '@/hooks/use-toast';
+import { useUser } from '@/contexts/UserContext';
+import { UserRole } from '@/types/compliance';
 
 const taskSchema = z.object({
   name: z.string().min(2, {
@@ -27,7 +36,7 @@ const taskSchema = z.object({
   man_day_cost: z.coerce.number().min(1, {
     message: "Man day cost must be at least 1.",
   }),
-  roles: z.string().min(2, {
+  roles: z.string().min(1, {
     message: "At least one role is required.",
   }),
 });
@@ -41,6 +50,11 @@ interface TaskFormProps {
 
 const TaskForm = ({ onTaskCreated, onCancel }: TaskFormProps) => {
   const { toast } = useToast();
+  const { getAllUsers } = useUser();
+  
+  // Get all Domain Accountable users
+  const allUsers = getAllUsers();
+  const accountableUsers = allUsers.filter(user => user.role === UserRole.DomainAccountable);
   
   const defaultValues: Partial<TaskFormValues> = {
     name: "",
@@ -56,8 +70,8 @@ const TaskForm = ({ onTaskCreated, onCancel }: TaskFormProps) => {
 
   function onSubmit(data: TaskFormValues) {
     try {
-      // Convert the comma-separated roles to an array
-      const rolesArray = data.roles.split(',').map(role => role.trim());
+      // For this version, we're using a single selected user role
+      const rolesArray = [data.roles];
       
       const newTask: Task = {
         name: data.name,
@@ -137,10 +151,24 @@ const TaskForm = ({ onTaskCreated, onCancel }: TaskFormProps) => {
           name="roles"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Roles (comma-separated)</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g. Developer, Manager, QA" {...field} />
-              </FormControl>
+              <FormLabel>Assign Role</FormLabel>
+              <Select 
+                onValueChange={field.onChange} 
+                defaultValue={field.value}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a Domain Accountable" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {accountableUsers.map((user) => (
+                    <SelectItem key={user.id} value={user.name}>
+                      {user.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
