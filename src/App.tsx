@@ -12,6 +12,7 @@ import TaskDetail from "./pages/TaskDetail";
 import JsonView from "./pages/JsonView";
 import NotFound from "./pages/NotFound";
 import UserManagement from "./pages/UserManagement";
+import UserRoles from "./pages/UserRoles";
 import DomainAllocation from "./pages/DomainAllocation";
 import UserTimeline from "./pages/UserTimeline";
 
@@ -62,6 +63,14 @@ const App = () => (
             element={
               <ProtectedRoute requireAdmin={true}>
                 <UserManagement />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/roles" 
+            element={
+              <ProtectedRoute>
+                <UserRoles />
               </ProtectedRoute>
             } 
           />
