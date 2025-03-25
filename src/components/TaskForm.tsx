@@ -3,7 +3,7 @@ import React from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { Task } from '@/types/compliance';
+import { Task, getCurrentTimestamp } from '@/types/compliance';
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -73,12 +73,16 @@ const TaskForm = ({ onTaskCreated, onCancel }: TaskFormProps) => {
       // For this version, we're using a single selected user role
       const rolesArray = [data.roles];
       
+      const timestamp = getCurrentTimestamp();
+      
       const newTask: Task = {
         name: data.name,
         description: data.description,
         man_day_cost: data.man_day_cost,
         roles: rolesArray,
         subtasks: [],
+        createdAt: timestamp,
+        updatedAt: timestamp
       };
       
       onTaskCreated(newTask);

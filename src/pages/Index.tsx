@@ -2,16 +2,33 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { complianceData } from '@/data/complianceData';
-import { Domain, Task } from '@/types/compliance';
+import { Domain, Task, getComplianceDataByDate } from '@/types/compliance';
 import GlassCard from '@/components/ui-components/GlassCard';
 import DomainCard from '@/components/DomainCard';
 import AnimatedCounter from '@/components/ui-components/AnimatedCounter';
 import Navbar from '@/components/Navbar';
+import { Calendar } from '@/components/ui/calendar';
+import { Button } from '@/components/ui/button';
+import { CalendarIcon, RotateCcw } from 'lucide-react';
+import { format } from 'date-fns';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Badge } from '@/components/ui/badge';
 
 const Index = () => {
   const navigate = useNavigate();
-  const { regulations } = complianceData;
-  const [selectedDomain, setSelectedDomain] = useState<Domain | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [isHistoricalView, setIsHistoricalView] = useState(false);
+  
+  // Use filtered data or original based on whether we're in historical view
+  const filteredData = isHistoricalView && selectedDate 
+    ? getComplianceDataByDate(complianceData, selectedDate) 
+    : complianceData;
+  
+  const { regulations } = filteredData;
   
   // Calculate total man-days
   const totalManDays = regulations.domains.reduce((sum, domain) => sum + domain.man_day_cost, 0);
@@ -28,18 +45,69 @@ const Index = () => {
     navigate(`/domain/${encodeURIComponent(domain.name)}`, { state: { domain } });
   };
 
+  const handleDateSelect = (date: Date | undefined) => {
+    setSelectedDate(date);
+    if (date) {
+      setIsHistoricalView(true);
+    }
+  };
+
+  const resetToCurrentView = () => {
+    setSelectedDate(new Date());
+    setIsHistoricalView(false);
+  };
+
   return (
     <>
       <Navbar />
       <main className="pt-24 pb-12 px-4 min-h-screen bg-gradient-to-b from-white to-blue-50">
         <div className="container mx-auto max-w-6xl">
           <section className="mb-12">
-            <div className="animate-slide-down">
-              <h1 className="text-3xl md:text-4xl font-semibold text-center mb-3">Regulatory Compliance</h1>
-              <p className="text-center text-muted-foreground max-w-3xl mx-auto">
-                {regulations.description}
-              </p>
+            <div className="flex justify-between items-center mb-6">
+              <div className="animate-slide-down">
+                <h1 className="text-3xl md:text-4xl font-semibold mb-3">Regulatory Compliance</h1>
+                <p className="text-muted-foreground max-w-3xl">
+                  {regulations.description}
+                </p>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="gap-2">
+                      <CalendarIcon className="h-4 w-4" />
+                      {selectedDate ? format(selectedDate, 'PPP') : 'Select date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={handleDateSelect}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+                
+                {isHistoricalView && (
+                  <Button variant="ghost" size="icon" onClick={resetToCurrentView} title="Reset to current view">
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
+            
+            {isHistoricalView && (
+              <div className="bg-blue-50 p-3 rounded-lg mb-6">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="bg-blue-100">Historical View</Badge>
+                  <span className="text-sm text-blue-800">
+                    Showing data as of {format(selectedDate!, 'PPP')}
+                  </span>
+                </div>
+              </div>
+            )}
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-10">
               <GlassCard className="text-center">
