@@ -4,27 +4,12 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { complianceData } from '@/data/complianceData';
 import { Domain, Task, UserRole } from '@/types/compliance';
 import Navbar from '@/components/Navbar';
-import TaskList from '@/components/TaskList';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Plus } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
+import { ArrowLeft } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import TaskForm from '@/components/TaskForm';
+import DomainInfo from '@/components/domain/DomainInfo';
+import DomainTasks from '@/components/domain/DomainTasks';
 
 const DomainDetail = () => {
   const { domainName } = useParams<{ domainName: string }>();
@@ -35,7 +20,6 @@ const DomainDetail = () => {
   const [domain, setDomain] = useState<Domain | null>(null);
   const [accountableUsers, setAccountableUsers] = useState<{ id: string; name: string }[]>([]);
   const [assignedAccountableId, setAssignedAccountableId] = useState<string>('');
-  const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
 
   useEffect(() => {
     // Find the domain by name
@@ -98,9 +82,6 @@ const DomainDetail = () => {
       // Update the domain in the state
       setDomain(updatedDomain);
       
-      // Close the dialog
-      setIsTaskDialogOpen(false);
-      
       // Find the domain index in the regulations data
       const domainIndex = complianceData.regulations.domains.findIndex(d => d.name === domainName);
       if (domainIndex !== -1) {
@@ -141,87 +122,21 @@ const DomainDetail = () => {
           Back
         </Button>
 
-        <div className="bg-white p-6 rounded-lg shadow mb-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
-            <h1 className="text-2xl font-bold">{domain.name}</h1>
-            
-            {isAdmin && (
-              <div className="mt-4 md:mt-0 w-full md:w-64">
-                <Select
-                  value={assignedAccountableId}
-                  onValueChange={handleAccountableAssignment}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Assign Domain Accountable" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {accountableUsers.map((user) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {user.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </div>
+        <DomainInfo 
+          domain={domain}
+          domainName={domainName}
+          isAdmin={isAdmin}
+          accountableUsers={accountableUsers}
+          assignedAccountableId={assignedAccountableId}
+          onAssignAccountable={handleAccountableAssignment}
+        />
 
-          {assignedAccountableId && (
-            <div className="bg-blue-50 p-3 rounded-md mb-4">
-              <p className="text-sm text-blue-800">
-                <span className="font-medium">Domain Accountable:</span>{' '}
-                {accountableUsers.find(user => user.id === assignedAccountableId)?.name}
-              </p>
-            </div>
-          )}
-
-          <p className="text-gray-700 mb-4">{domain.description}</p>
-          
-          <div className="flex flex-wrap gap-2 mb-4">
-            <div className="bg-gray-100 px-3 py-1 rounded-full text-sm">
-              <span className="font-medium">Effort:</span> {domain.man_day_cost} man-days
-            </div>
-            <div className="bg-gray-100 px-3 py-1 rounded-full text-sm">
-              <span className="font-medium">Tasks:</span> {domain.tasks.length}
-            </div>
-            {domain.accountableRole && (
-              <div className="bg-gray-100 px-3 py-1 rounded-full text-sm">
-                <span className="font-medium">Accountable Role:</span> {domain.accountableRole}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold">Tasks</h2>
-            {canManageTasks && (
-              <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm">
-                    <Plus className="mr-1" />
-                    Add Task
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Add New Task</DialogTitle>
-                  </DialogHeader>
-                  <TaskForm 
-                    onTaskCreated={handleTaskCreated}
-                    onCancel={() => setIsTaskDialogOpen(false)}
-                  />
-                </DialogContent>
-              </Dialog>
-            )}
-          </div>
-          
-          <TaskList 
-            tasks={domain.tasks} 
-            onSelectTask={onSelectTask}
-          />
-        </div>
+        <DomainTasks 
+          domain={domain}
+          canManageTasks={canManageTasks}
+          onTaskCreated={handleTaskCreated}
+          onSelectTask={onSelectTask}
+        />
       </div>
     </>
   );
