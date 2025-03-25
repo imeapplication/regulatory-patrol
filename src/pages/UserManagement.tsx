@@ -40,7 +40,8 @@ import {
 } from '@/components/ui/select';
 import { User, UserRole, getRolePermissions } from '@/types/compliance';
 import { useToast } from '@/hooks/use-toast';
-import { Edit, Plus, Trash } from 'lucide-react';
+import { Edit, Plus, Trash, History, User as UserIcon } from 'lucide-react';
+import UserAllocationHistory from '@/components/UserAllocationHistory';
 
 const UserManagement = () => {
   const { currentUser, getAllUsers, addUser, updateUser, deleteUser, isAdmin } = useUser();
@@ -49,6 +50,7 @@ const UserManagement = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -146,6 +148,11 @@ const UserManagement = () => {
     setSelectedUser(user);
     setIsDeleteDialogOpen(true);
   };
+  
+  const openHistoryDrawer = (user: User) => {
+    setSelectedUser(user);
+    setIsHistoryDrawerOpen(true);
+  };
 
   return (
     <>
@@ -171,7 +178,7 @@ const UserManagement = () => {
             </TableHeader>
             <TableBody>
               {users.map((user) => (
-                <TableRow key={user.id}>
+                <TableRow key={user.id} className="cursor-pointer hover:bg-gray-50" onClick={() => openHistoryDrawer(user)}>
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
@@ -191,7 +198,21 @@ const UserManagement = () => {
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      onClick={() => openEditDialog(user)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openHistoryDrawer(user);
+                      }}
+                      className="mr-2"
+                    >
+                      <History size={16} />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditDialog(user);
+                      }}
                       disabled={user.id === currentUser?.id}
                       className="mr-2"
                     >
@@ -200,7 +221,10 @@ const UserManagement = () => {
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      onClick={() => openDeleteDialog(user)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openDeleteDialog(user);
+                      }}
                       disabled={user.id === currentUser?.id}
                     >
                       <Trash size={16} />
@@ -340,6 +364,13 @@ const UserManagement = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {/* User Allocation History Drawer */}
+      <UserAllocationHistory 
+        user={selectedUser}
+        isOpen={isHistoryDrawerOpen}
+        onOpenChange={setIsHistoryDrawerOpen}
+      />
     </>
   );
 };
