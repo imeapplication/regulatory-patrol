@@ -15,7 +15,7 @@ import {
   DrawerClose
 } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui-components/Badge';
+import Badge from '@/components/ui-components/Badge';
 
 interface UserAllocationHistoryProps {
   user: User | null;
