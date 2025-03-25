@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { complianceData } from '@/data/complianceData';
@@ -6,6 +5,7 @@ import { Domain, Task, getComplianceDataByDate } from '@/types/compliance';
 import GlassCard from '@/components/ui-components/GlassCard';
 import DomainCard from '@/components/DomainCard';
 import AnimatedCounter from '@/components/ui-components/AnimatedCounter';
+import TimeDisplay from '@/components/ui-components/TimeDisplay';
 import Navbar from '@/components/Navbar';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
@@ -23,17 +23,14 @@ const Index = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isHistoricalView, setIsHistoricalView] = useState(false);
   
-  // Use filtered data or original based on whether we're in historical view
   const filteredData = isHistoricalView && selectedDate 
     ? getComplianceDataByDate(complianceData, selectedDate) 
     : complianceData;
   
   const { regulations } = filteredData;
   
-  // Calculate total man-days
   const totalManDays = regulations.domains.reduce((sum, domain) => sum + domain.man_day_cost, 0);
   
-  // Get all roles across the data
   const allRoles = new Set<string>();
   regulations.domains.forEach(domain => {
     domain.tasks.forEach(task => {
@@ -71,7 +68,9 @@ const Index = () => {
                 </p>
               </div>
               
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col md:flex-row items-end md:items-center gap-2">
+                <TimeDisplay className="mb-2 md:mb-0" />
+                
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="gap-2">
