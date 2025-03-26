@@ -15,7 +15,7 @@ const DomainDetail = () => {
   const { domainName } = useParams<{ domainName: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isAdmin, isDomainAccountableFor, getAllUsers, assignDomainToAccountable, removeDomainFromAccountable } = useUser();
+  const { isAdmin, isDomainAccountableFor, getAllUsers, assignDomainToAccountable, removeDomainFromAccountable, saveComplianceData } = useUser();
   
   const [domain, setDomain] = useState<Domain | null>(null);
   const [accountableUsers, setAccountableUsers] = useState<{ id: string; name: string }[]>([]);
@@ -69,6 +69,9 @@ const DomainDetail = () => {
         description: `No user is accountable for ${domainName} now`,
       });
     }
+    
+    // Save the changes to compliance data
+    saveComplianceData();
   };
 
   const handleTaskCreated = (newTask: Task) => {
@@ -87,6 +90,9 @@ const DomainDetail = () => {
       if (domainIndex !== -1) {
         // Update the domain in the actual data source
         complianceData.regulations.domains[domainIndex] = updatedDomain;
+        
+        // Save the changes to compliance data
+        saveComplianceData();
       }
     }
   };

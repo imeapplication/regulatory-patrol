@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useUser } from '@/contexts/UserContext';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
@@ -46,7 +46,7 @@ import UserAllocationHistory from '@/components/UserAllocationHistory';
 const UserManagement = () => {
   const { currentUser, getAllUsers, addUser, updateUser, deleteUser, isAdmin } = useUser();
   const { toast } = useToast();
-  const [users, setUsers] = useState<User[]>(getAllUsers());
+  const [users, setUsers] = useState<User[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -58,7 +58,11 @@ const UserManagement = () => {
     role: UserRole.Regular,
   });
 
-  // Refresh user list
+  // Refresh user list - now using useEffect to load users initially and after changes
+  useEffect(() => {
+    refreshUserList();
+  }, [getAllUsers]); // This will run on component mount and any time getAllUsers changes
+
   const refreshUserList = () => {
     setUsers(getAllUsers());
   };

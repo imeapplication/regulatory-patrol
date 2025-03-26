@@ -49,7 +49,7 @@ interface TaskFormProps {
 
 const TaskForm = ({ onTaskCreated, onCancel }: TaskFormProps) => {
   const { toast } = useToast();
-  const { getAllUsers } = useUser();
+  const { getAllUsers, saveComplianceData } = useUser();
   
   // Get all Regular users
   const allUsers = getAllUsers();
@@ -92,6 +92,9 @@ const TaskForm = ({ onTaskCreated, onCancel }: TaskFormProps) => {
       };
       
       onTaskCreated(newTask);
+      
+      // Save the compliance data after task creation
+      saveComplianceData();
       
       toast({
         title: "Task Created",

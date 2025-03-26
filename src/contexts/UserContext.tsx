@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserRole, getRolePermissions } from '@/types/compliance';
+import { complianceData } from '@/data/complianceData';
 
 // Sample user data
 const DEFAULT_USERS = [
@@ -43,6 +44,7 @@ interface UserContextType {
   assignDomainToAccountable: (userId: string, domainName: string) => void;
   removeDomainFromAccountable: (userId: string, domainName: string) => void;
   isDomainAccountableFor: (domainName: string) => boolean;
+  saveComplianceData: () => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -69,6 +71,28 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     localStorage.setItem('users', JSON.stringify(users));
   }, [users]);
+
+  // Load saved compliance data from localStorage if available
+  useEffect(() => {
+    const savedComplianceData = localStorage.getItem('complianceData');
+    if (savedComplianceData) {
+      try {
+        const parsedData = JSON.parse(savedComplianceData);
+        // Update the imported complianceData with the saved data
+        Object.assign(complianceData, parsedData);
+      } catch (error) {
+        console.error("Error loading saved compliance data:", error);
+      }
+    }
+  }, []);
+
+  const saveComplianceData = () => {
+    try {
+      localStorage.setItem('complianceData', JSON.stringify(complianceData));
+    } catch (error) {
+      console.error("Error saving compliance data:", error);
+    }
+  };
 
   const login = (email: string): boolean => {
     const user = users.find(u => u.email === email);
@@ -182,7 +206,8 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       deleteUser,
       assignDomainToAccountable,
       removeDomainFromAccountable,
-      isDomainAccountableFor
+      isDomainAccountableFor,
+      saveComplianceData
     }}>
       {children}
     </UserContext.Provider>
