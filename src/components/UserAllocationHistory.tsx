@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isAfter } from 'date-fns';
 import { User, UserRole } from '@/types/compliance';
 import { complianceData } from '@/data/complianceData';
 import { Clock, CalendarIcon } from 'lucide-react';
@@ -56,43 +56,59 @@ const UserAllocationHistory = ({ user, isOpen, onOpenChange }: UserAllocationHis
     }
   }, [user, getUserAllocationHistory]);
   
-  // Calculate user allocations
+  // Calculate user allocations based on allocation history up to the current date
   const calculateAllocations = () => {
     if (!user) return { domains: [], totalManDays: 0, createdAt: 'Unknown' };
     
-    const domains: string[] = [];
+    // Initialize sets to track domains
+    const accountableDomains = new Set<string>();
+    const manageableDomains = new Set<string>();
+    
+    // Process allocation history to determine current domains
+    allocationHistory.forEach(entry => {
+      const entryDate = parseISO(entry.timestamp);
+      
+      // Only consider entries up to the current selected date
+      if (!isAfter(entryDate, date)) {
+        if (entry.role === 'DomainAccountable') {
+          if (entry.action === 'assigned') {
+            accountableDomains.add(entry.domainName);
+          } else if (entry.action === 'removed') {
+            accountableDomains.delete(entry.domainName);
+          }
+        } else if (entry.role === 'DomainManager') {
+          if (entry.action === 'assigned') {
+            manageableDomains.add(entry.domainName);
+          } else if (entry.action === 'removed') {
+            manageableDomains.delete(entry.domainName);
+          }
+        }
+      }
+    });
+    
+    // Combine domains based on user role
+    let domains: string[] = [];
     let totalManDays = 0;
     
-    // Fetch domains based on user role
-    if (user.role === UserRole.DomainAccountable && user.permissions.accountableDomains) {
-      domains.push(...user.permissions.accountableDomains);
-      
-      // Calculate man days for accountable domains
-      user.permissions.accountableDomains.forEach(domainName => {
-        const domain = complianceData.regulations.domains.find(d => d.name === domainName);
-        if (domain) {
-          totalManDays += domain.man_day_cost;
-        }
-      });
+    if (user.role === UserRole.DomainAccountable) {
+      domains = [...accountableDomains];
+    } else if (user.role === UserRole.DomainManager) {
+      domains = [...manageableDomains];
     }
     
-    if (user.role === UserRole.DomainManager && user.permissions.manageableDomains) {
-      domains.push(...user.permissions.manageableDomains);
-      
-      // Calculate man days for manageable domains
-      user.permissions.manageableDomains.forEach(domainName => {
-        const domain = complianceData.regulations.domains.find(d => d.name === domainName);
-        if (domain) {
-          totalManDays += domain.man_day_cost;
-        }
-      });
-    }
+    // Calculate man days
+    domains.forEach(domainName => {
+      const domain = complianceData.regulations.domains.find(d => d.name === domainName);
+      if (domain) {
+        totalManDays += domain.man_day_cost;
+      }
+    });
     
     // Simulate creation date (would come from user data in real app)
     const createdAt = '2023-01-15T10:30:00Z';
     
     return { 
-      domains: [...new Set(domains)], // Remove duplicates
+      domains,
       totalManDays,
       createdAt
     };
@@ -103,7 +119,7 @@ const UserAllocationHistory = ({ user, isOpen, onOpenChange }: UserAllocationHis
   // Filter history entries by date
   const filteredHistory = allocationHistory.filter(entry => {
     const entryDate = parseISO(entry.timestamp);
-    return entryDate <= date;
+    return !isAfter(entryDate, date);
   });
   
   // Sort history by timestamp (newest first)

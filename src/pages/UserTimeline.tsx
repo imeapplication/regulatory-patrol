@@ -2,14 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '@/contexts/UserContext';
 import { complianceData } from '@/data/complianceData';
-import { User, UserRole } from '@/types/compliance';
+import { User, UserRole, getComplianceDataByDate } from '@/types/compliance';
 import Navbar from '@/components/Navbar';
 import TimeDisplay from '@/components/ui-components/TimeDisplay';
 import { Calendar } from '@/components/ui/calendar';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { format, parseISO, isAfter } from 'date-fns';
+import { format, parseISO, isAfter, isBefore } from 'date-fns';
 import { Calendar as CalendarIcon, Users, History } from 'lucide-react';
 
 interface AllocationEntry {
@@ -26,6 +26,7 @@ const UserTimeline = () => {
   const allocationHistory = getAllocationHistory();
   
   // Calculate user allocations based on their assigned domains and roles
+  // and filter by the selected date
   const calculateAllocations = (): AllocationEntry[] => {
     const allocations: AllocationEntry[] = [];
     
@@ -37,12 +38,40 @@ const UserTimeline = () => {
         totalManDays: 0
       };
       
-      // If user is Domain Accountable, add their accountable domains
-      if (user.role === UserRole.DomainAccountable && user.permissions.accountableDomains) {
-        userAllocation.domains = [...user.permissions.accountableDomains];
+      // Get all allocation history for this user
+      const userHistory = allocationHistory.filter(entry => entry.userId === user.id);
+      
+      // Calculate domains based on allocation history up to the selected date
+      const accountableDomains = new Set<string>();
+      const manageableDomains = new Set<string>();
+      
+      userHistory.forEach(entry => {
+        const eventDate = parseISO(entry.timestamp);
+        
+        // Only consider events that happened before or on the selected date
+        if (!isAfter(eventDate, selectedDate)) {
+          if (entry.role === 'DomainAccountable') {
+            if (entry.action === 'assigned') {
+              accountableDomains.add(entry.domainName);
+            } else if (entry.action === 'removed') {
+              accountableDomains.delete(entry.domainName);
+            }
+          } else if (entry.role === 'DomainManager') {
+            if (entry.action === 'assigned') {
+              manageableDomains.add(entry.domainName);
+            } else if (entry.action === 'removed') {
+              manageableDomains.delete(entry.domainName);
+            }
+          }
+        }
+      });
+      
+      // Add domains based on role
+      if (user.role === UserRole.DomainAccountable) {
+        userAllocation.domains = [...accountableDomains];
         
         // Calculate man days for accountable domains
-        user.permissions.accountableDomains.forEach(domainName => {
+        accountableDomains.forEach(domainName => {
           const domain = complianceData.regulations.domains.find(d => d.name === domainName);
           if (domain) {
             userAllocation.totalManDays += domain.man_day_cost;
@@ -50,12 +79,11 @@ const UserTimeline = () => {
         });
       }
       
-      // If user is Domain Manager, add their manageable domains
-      if (user.role === UserRole.DomainManager && user.permissions.manageableDomains) {
-        userAllocation.domains = [...(user.permissions.manageableDomains || [])];
+      if (user.role === UserRole.DomainManager) {
+        userAllocation.domains = [...manageableDomains];
         
         // Calculate man days for manageable domains
-        user.permissions.manageableDomains.forEach(domainName => {
+        manageableDomains.forEach(domainName => {
           const domain = complianceData.regulations.domains.find(d => d.name === domainName);
           if (domain) {
             userAllocation.totalManDays += domain.man_day_cost;
@@ -63,16 +91,20 @@ const UserTimeline = () => {
         });
       }
       
-      // Remove duplicates from domains
-      userAllocation.domains = [...new Set(userAllocation.domains)];
-      
-      allocations.push(userAllocation);
+      // Only add users who have domains assigned
+      if (userAllocation.domains.length > 0) {
+        allocations.push(userAllocation);
+      } else if (user.role === UserRole.DomainAccountable || user.role === UserRole.DomainManager) {
+        // Include domain managers and accountables even if they have no domains
+        allocations.push(userAllocation);
+      }
     });
     
     // Sort by total man days (highest first)
     return allocations.sort((a, b) => b.totalManDays - a.totalManDays);
   };
   
+  // Get allocations based on selected date
   const allocations = calculateAllocations();
   
   // Get allocation events for the selected date
@@ -112,12 +144,13 @@ const UserTimeline = () => {
                   {format(selectedDate, 'PPP')}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
+              <PopoverContent className="w-auto p-0 pointer-events-auto" align="end">
                 <Calendar
                   mode="single"
                   selected={selectedDate}
                   onSelect={(date) => date && setSelectedDate(date)}
                   initialFocus
+                  className="pointer-events-auto"
                 />
               </PopoverContent>
             </Popover>
