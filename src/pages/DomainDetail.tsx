@@ -10,6 +10,7 @@ import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
 import DomainInfo from '@/components/domain/DomainInfo';
 import DomainTasks from '@/components/domain/DomainTasks';
+import { Card, CardContent } from '@/components/ui/card';
 
 const DomainDetail = () => {
   const { domainName } = useParams<{ domainName: string }>();
@@ -96,12 +97,14 @@ const DomainDetail = () => {
       <>
         <Navbar />
         <div className="pt-24 px-4 container mx-auto">
-          <div className="bg-white p-6 rounded-lg shadow">
-            <p>Domain not found.</p>
-            <Button asChild className="mt-4">
-              <Link to="/">Go Back</Link>
-            </Button>
-          </div>
+          <Card className="bg-white border-none shadow-lg animate-fade-in">
+            <CardContent className="p-6">
+              <p>Domain not found.</p>
+              <Button asChild className="mt-4">
+                <Link to="/">Go Back</Link>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </>
     );
@@ -116,28 +119,39 @@ const DomainDetail = () => {
   return (
     <>
       <Navbar />
-      <div className="pt-24 px-4 container mx-auto">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="mb-6">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
-        </Button>
+      <main className="pt-24 pb-12 px-4 min-h-screen bg-gradient-to-b from-white to-blue-50">
+        <div className="container mx-auto max-w-4xl">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6 animate-fade-in">
+            <Link to="/" className="hover:text-foreground">Dashboard</Link>
+            <ArrowLeft className="h-4 w-4" />
+            <span className="font-medium text-foreground">{domain.name}</span>
+          </div>
 
-        <DomainInfo 
-          domain={domain}
-          domainName={domainName}
-          isAdmin={isAdmin}
-          accountableUsers={accountableUsers}
-          assignedAccountableId={assignedAccountableId}
-          onAssignAccountable={handleAccountableAssignment}
-        />
+          <Card className="border-none shadow-lg mb-8 overflow-hidden animate-slide-down">
+            <CardContent className="p-0">
+              <DomainInfo 
+                domain={domain}
+                domainName={domainName}
+                isAdmin={isAdmin}
+                accountableUsers={accountableUsers}
+                assignedAccountableId={assignedAccountableId}
+                onAssignAccountable={handleAccountableAssignment}
+              />
+            </CardContent>
+          </Card>
 
-        <DomainTasks 
-          domain={domain}
-          canManageTasks={canManageTasks}
-          onTaskCreated={handleTaskCreated}
-          onSelectTask={onSelectTask}
-        />
-      </div>
+          <Card className="border-none shadow-lg overflow-hidden animate-slide-up">
+            <CardContent className="p-0">
+              <DomainTasks 
+                domain={domain}
+                canManageTasks={canManageTasks}
+                onTaskCreated={handleTaskCreated}
+                onSelectTask={onSelectTask}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      </main>
     </>
   );
 };

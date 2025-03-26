@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Domain, Task } from '@/types/compliance';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, ListChecks } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -29,18 +29,24 @@ const DomainTasks = ({
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow">
+    <div className="p-6 bg-white rounded-lg">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold">Tasks</h2>
+        <div className="flex items-center gap-2">
+          <ListChecks className="h-6 w-6 text-blue-600" />
+          <h2 className="text-2xl font-semibold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+            Tasks
+          </h2>
+        </div>
+        
         {canManageTasks && (
           <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="mr-1" />
+              <Button size="sm" className="gap-1 bg-blue-600 hover:bg-blue-700 shadow-sm">
+                <Plus className="h-4 w-4" />
                 Add Task
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-md bg-white">
               <DialogHeader>
                 <DialogTitle>Add New Task</DialogTitle>
               </DialogHeader>
@@ -57,6 +63,18 @@ const DomainTasks = ({
         tasks={domain.tasks} 
         onSelectTask={onSelectTask}
       />
+      
+      {domain.tasks.length === 0 && (
+        <div className="text-center py-10 text-gray-500 animate-fade-in">
+          <ListChecks className="h-12 w-12 mx-auto text-gray-300 mb-3" />
+          <p className="text-lg font-medium mb-2">No tasks yet</p>
+          <p className="text-sm text-gray-400 max-w-md mx-auto">
+            {canManageTasks 
+              ? "Get started by adding your first task using the 'Add Task' button above."
+              : "There are no tasks defined for this domain yet."}
+          </p>
+        </div>
+      )}
     </div>
   );
 };
