@@ -97,6 +97,9 @@ const TaskForm = ({ onTaskCreated, onCancel }: TaskFormProps) => {
         title: "Task Created",
         description: `Task "${data.name}" has been assigned to ${selectedUser.name}.`,
       });
+      
+      // Close the dialog after successful task creation
+      onCancel();
     } catch (error) {
       console.error("Error creating task:", error);
       toast({
