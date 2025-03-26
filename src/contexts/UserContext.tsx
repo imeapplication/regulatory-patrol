@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserRole, getRolePermissions } from '@/types/compliance';
 
@@ -30,6 +29,15 @@ const DEFAULT_USERS = [
   }
 ];
 
+// Define the allocation history entry type
+interface AllocationHistoryEntry {
+  userId: string;
+  domainName: string;
+  action: 'assigned' | 'removed';
+  timestamp: string;
+  role: 'DomainManager' | 'DomainAccountable';
+}
+
 interface UserContextType {
   currentUser: User | null;
   login: (email: string) => boolean;
@@ -42,7 +50,11 @@ interface UserContextType {
   deleteUser: (userId: string) => void;
   assignDomainToAccountable: (userId: string, domainName: string) => void;
   removeDomainFromAccountable: (userId: string, domainName: string) => void;
+  assignDomainToManager: (userId: string, domainName: string) => void;
+  removeDomainFromManager: (userId: string, domainName: string) => void;
   isDomainAccountableFor: (domainName: string) => boolean;
+  getAllocationHistory: () => AllocationHistoryEntry[];
+  getUserAllocationHistory: (userId: string) => AllocationHistoryEntry[];
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -65,10 +77,21 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     return localStorage.getItem('currentUser') !== null;
   });
 
+  // Add state for allocation history
+  const [allocationHistory, setAllocationHistory] = useState<AllocationHistoryEntry[]>(() => {
+    const savedHistory = localStorage.getItem('allocationHistory');
+    return savedHistory ? JSON.parse(savedHistory) : [];
+  });
+
   // Sync users with localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('users', JSON.stringify(users));
   }, [users]);
+
+  // Sync allocation history with localStorage
+  useEffect(() => {
+    localStorage.setItem('allocationHistory', JSON.stringify(allocationHistory));
+  }, [allocationHistory]);
 
   const login = (email: string): boolean => {
     const user = users.find(u => u.email === email);
@@ -117,6 +140,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     localStorage.setItem('users', JSON.stringify(newUsers));
   };
 
+  // Updated to add history entry
   const assignDomainToAccountable = (userId: string, domainName: string) => {
     const userToUpdate = users.find(user => user.id === userId);
     
@@ -134,10 +158,22 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         };
         
         updateUser(updatedUser);
+        
+        // Add history entry
+        const historyEntry: AllocationHistoryEntry = {
+          userId,
+          domainName,
+          action: 'assigned',
+          timestamp: new Date().toISOString(),
+          role: 'DomainAccountable'
+        };
+        
+        setAllocationHistory(prev => [...prev, historyEntry]);
       }
     }
   };
 
+  // Updated to add history entry
   const removeDomainFromAccountable = (userId: string, domainName: string) => {
     const userToUpdate = users.find(user => user.id === userId);
     
@@ -154,6 +190,82 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         };
         
         updateUser(updatedUser);
+        
+        // Add history entry
+        const historyEntry: AllocationHistoryEntry = {
+          userId,
+          domainName,
+          action: 'removed',
+          timestamp: new Date().toISOString(),
+          role: 'DomainAccountable'
+        };
+        
+        setAllocationHistory(prev => [...prev, historyEntry]);
+      }
+    }
+  };
+
+  // Add function to assign domain to manager
+  const assignDomainToManager = (userId: string, domainName: string) => {
+    const userToUpdate = users.find(user => user.id === userId);
+    
+    if (userToUpdate && userToUpdate.role === UserRole.DomainManager) {
+      const manageableDomains = userToUpdate.permissions.manageableDomains || [];
+      
+      // Only add if not already assigned
+      if (!manageableDomains.includes(domainName)) {
+        const updatedUser = {
+          ...userToUpdate,
+          permissions: {
+            ...userToUpdate.permissions,
+            manageableDomains: [...manageableDomains, domainName]
+          }
+        };
+        
+        updateUser(updatedUser);
+        
+        // Add history entry
+        const historyEntry: AllocationHistoryEntry = {
+          userId,
+          domainName,
+          action: 'assigned',
+          timestamp: new Date().toISOString(),
+          role: 'DomainManager'
+        };
+        
+        setAllocationHistory(prev => [...prev, historyEntry]);
+      }
+    }
+  };
+
+  // Add function to remove domain from manager
+  const removeDomainFromManager = (userId: string, domainName: string) => {
+    const userToUpdate = users.find(user => user.id === userId);
+    
+    if (userToUpdate && userToUpdate.role === UserRole.DomainManager) {
+      const manageableDomains = userToUpdate.permissions.manageableDomains || [];
+      
+      if (manageableDomains.includes(domainName)) {
+        const updatedUser = {
+          ...userToUpdate,
+          permissions: {
+            ...userToUpdate.permissions,
+            manageableDomains: manageableDomains.filter(domain => domain !== domainName)
+          }
+        };
+        
+        updateUser(updatedUser);
+        
+        // Add history entry
+        const historyEntry: AllocationHistoryEntry = {
+          userId,
+          domainName,
+          action: 'removed',
+          timestamp: new Date().toISOString(),
+          role: 'DomainManager'
+        };
+        
+        setAllocationHistory(prev => [...prev, historyEntry]);
       }
     }
   };
@@ -165,6 +277,15 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     
     const accountableDomains = currentUser.permissions.accountableDomains || [];
     return accountableDomains.includes(domainName);
+  };
+
+  // Functions to access allocation history
+  const getAllocationHistory = (): AllocationHistoryEntry[] => {
+    return allocationHistory;
+  };
+
+  const getUserAllocationHistory = (userId: string): AllocationHistoryEntry[] => {
+    return allocationHistory.filter(entry => entry.userId === userId);
   };
 
   const isAdmin = currentUser?.role === UserRole.Administrator;
@@ -182,7 +303,11 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       deleteUser,
       assignDomainToAccountable,
       removeDomainFromAccountable,
-      isDomainAccountableFor
+      assignDomainToManager,
+      removeDomainFromManager,
+      isDomainAccountableFor,
+      getAllocationHistory,
+      getUserAllocationHistory
     }}>
       {children}
     </UserContext.Provider>

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { format } from 'date-fns';
-import { User, UserRole, Domain } from '@/types/compliance';
+import { format, parseISO } from 'date-fns';
+import { User, UserRole } from '@/types/compliance';
 import { complianceData } from '@/data/complianceData';
 import { Clock, CalendarIcon } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import Badge from '@/components/ui-components/Badge';
+import { useUser } from '@/contexts/UserContext';
 
 interface UserAllocationHistoryProps {
   user: User | null;
@@ -24,8 +25,15 @@ interface UserAllocationHistoryProps {
 }
 
 const UserAllocationHistory = ({ user, isOpen, onOpenChange }: UserAllocationHistoryProps) => {
+  const { getUserAllocationHistory } = useUser();
   const [timeValue, setTimeValue] = useState(100); // 0-100 representing past to present
   const [date, setDate] = useState<Date>(new Date());
+  const [allocationHistory, setAllocationHistory] = useState<Array<{
+    domainName: string;
+    action: string;
+    timestamp: string;
+    role: string;
+  }>>([]);
   
   // Update date when timeValue changes
   useEffect(() => {
@@ -39,6 +47,14 @@ const UserAllocationHistory = ({ user, isOpen, onOpenChange }: UserAllocationHis
     const newDate = new Date(threeMonthsAgo.getTime() + (millisecondDiff * timeValue / 100));
     setDate(newDate);
   }, [timeValue]);
+  
+  // Fetch user allocation history when user changes
+  useEffect(() => {
+    if (user) {
+      const history = getUserAllocationHistory(user.id);
+      setAllocationHistory(history);
+    }
+  }, [user, getUserAllocationHistory]);
   
   // Calculate user allocations
   const calculateAllocations = () => {
@@ -83,6 +99,17 @@ const UserAllocationHistory = ({ user, isOpen, onOpenChange }: UserAllocationHis
   };
   
   const { domains, totalManDays, createdAt } = calculateAllocations();
+  
+  // Filter history entries by date
+  const filteredHistory = allocationHistory.filter(entry => {
+    const entryDate = parseISO(entry.timestamp);
+    return entryDate <= date;
+  });
+  
+  // Sort history by timestamp (newest first)
+  const sortedHistory = [...filteredHistory].sort((a, b) => {
+    return parseISO(b.timestamp).getTime() - parseISO(a.timestamp).getTime();
+  });
   
   if (!user) return null;
   
@@ -150,6 +177,37 @@ const UserAllocationHistory = ({ user, isOpen, onOpenChange }: UserAllocationHis
               ) : (
                 <div className="text-sm text-muted-foreground italic mt-2">
                   No domains assigned at this time
+                </div>
+              )}
+            </div>
+            
+            {/* Allocation History */}
+            <div className="mb-6">
+              <div className="text-sm font-medium mb-3">Allocation History</div>
+              
+              {sortedHistory.length > 0 ? (
+                <div className="space-y-2 max-h-64 overflow-y-auto border rounded-md p-2">
+                  {sortedHistory.map((entry, index) => (
+                    <div key={index} className="border-b border-gray-100 pb-2 last:border-0 last:pb-0">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <span className="text-sm font-medium">
+                            {entry.action === 'assigned' ? 'Assigned to' : 'Removed from'} {entry.domainName}
+                          </span>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Role: {entry.role}
+                          </div>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {format(parseISO(entry.timestamp), 'MMM d, yyyy h:mm a')}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground italic mt-2">
+                  No allocation history available
                 </div>
               )}
             </div>

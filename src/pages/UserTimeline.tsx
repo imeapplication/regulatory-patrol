@@ -1,16 +1,16 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useUser } from '@/contexts/UserContext';
 import { complianceData } from '@/data/complianceData';
-import { User, UserRole, Domain, Task } from '@/types/compliance';
+import { User, UserRole } from '@/types/compliance';
 import Navbar from '@/components/Navbar';
 import TimeDisplay from '@/components/ui-components/TimeDisplay';
 import { Calendar } from '@/components/ui/calendar';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Users } from 'lucide-react';
+import { format, parseISO, isAfter } from 'date-fns';
+import { Calendar as CalendarIcon, Users, History } from 'lucide-react';
 
 interface AllocationEntry {
   user: User;
@@ -20,9 +20,10 @@ interface AllocationEntry {
 }
 
 const UserTimeline = () => {
-  const { getAllUsers } = useUser();
+  const { getAllUsers, getAllocationHistory } = useUser();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const users = getAllUsers();
+  const allocationHistory = getAllocationHistory();
   
   // Calculate user allocations based on their assigned domains and roles
   const calculateAllocations = (): AllocationEntry[] => {
@@ -74,6 +75,22 @@ const UserTimeline = () => {
   
   const allocations = calculateAllocations();
   
+  // Get allocation events for the selected date
+  const getRecentAllocationEvents = () => {
+    // Filter events that occurred before or on the selected date
+    const filteredEvents = allocationHistory.filter(event => {
+      const eventDate = parseISO(event.timestamp);
+      return !isAfter(eventDate, selectedDate);
+    });
+    
+    // Sort by timestamp (newest first)
+    return filteredEvents.sort((a, b) => {
+      return parseISO(b.timestamp).getTime() - parseISO(a.timestamp).getTime();
+    }).slice(0, 10); // Get most recent 10 events
+  };
+  
+  const recentEvents = getRecentAllocationEvents();
+  
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -106,6 +123,42 @@ const UserTimeline = () => {
             </Popover>
           </div>
         </div>
+        
+        {/* Allocation Events */}
+        {recentEvents.length > 0 && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-8">
+            <div className="p-4 bg-gray-50 border-b border-gray-200">
+              <h2 className="text-lg font-medium flex items-center gap-2">
+                <History className="h-5 w-5 text-muted-foreground" />
+                Recent Allocation Events
+              </h2>
+            </div>
+            
+            <div className="p-4">
+              <div className="space-y-3">
+                {recentEvents.map((event, index) => {
+                  const user = users.find(u => u.id === event.userId);
+                  return (
+                    <div key={index} className="flex justify-between items-center border-b border-gray-100 pb-3 last:border-0 last:pb-0">
+                      <div>
+                        <span className="font-medium">{user?.name}</span>
+                        <span className="text-sm text-muted-foreground ml-1">
+                          was {event.action === 'assigned' ? 'assigned to' : 'removed from'} {event.domainName}
+                        </span>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Role: {event.role}
+                        </div>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {format(parseISO(event.timestamp), 'MMM d, yyyy h:mm a')}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* Allocation Table */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
