@@ -93,6 +93,11 @@ const DomainDetail = () => {
         
         // Save the changes to compliance data
         saveComplianceData();
+        
+        toast({
+          title: "Task Created",
+          description: `The task "${newTask.name}" has been created and saved.`
+        });
       }
     }
   };

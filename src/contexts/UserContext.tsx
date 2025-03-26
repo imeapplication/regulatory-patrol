@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserRole, getRolePermissions } from '@/types/compliance';
 import { complianceData } from '@/data/complianceData';
@@ -67,12 +66,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     return localStorage.getItem('currentUser') !== null;
   });
 
-  // Sync users with localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('users', JSON.stringify(users));
-  }, [users]);
-
-  // Load saved compliance data from localStorage if available
+  // Load saved compliance data from localStorage on initial render ONLY
   useEffect(() => {
     const savedComplianceData = localStorage.getItem('complianceData');
     if (savedComplianceData) {
@@ -80,15 +74,25 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         const parsedData = JSON.parse(savedComplianceData);
         // Update the imported complianceData with the saved data
         Object.assign(complianceData, parsedData);
+        console.log("Loaded compliance data from localStorage:", parsedData);
       } catch (error) {
         console.error("Error loading saved compliance data:", error);
       }
+    } else {
+      console.log("No saved compliance data found in localStorage");
     }
   }, []);
+
+  // Sync users with localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('users', JSON.stringify(users));
+    console.log("Saved users to localStorage:", users);
+  }, [users]);
 
   const saveComplianceData = () => {
     try {
       localStorage.setItem('complianceData', JSON.stringify(complianceData));
+      console.log("Saved compliance data to localStorage:", complianceData);
     } catch (error) {
       console.error("Error saving compliance data:", error);
     }
@@ -118,7 +122,6 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const addUser = (user: User) => {
     const newUsers = [...users, user];
     setUsers(newUsers);
-    localStorage.setItem('users', JSON.stringify(newUsers));
   };
 
   const updateUser = (updatedUser: User) => {
@@ -126,7 +129,6 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       user.id === updatedUser.id ? updatedUser : user
     );
     setUsers(newUsers);
-    localStorage.setItem('users', JSON.stringify(newUsers));
     
     // If the current user was updated, update the currentUser state
     if (currentUser && currentUser.id === updatedUser.id) {
@@ -138,7 +140,6 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const deleteUser = (userId: string) => {
     const newUsers = users.filter(user => user.id !== userId);
     setUsers(newUsers);
-    localStorage.setItem('users', JSON.stringify(newUsers));
   };
 
   const assignDomainToAccountable = (userId: string, domainName: string) => {

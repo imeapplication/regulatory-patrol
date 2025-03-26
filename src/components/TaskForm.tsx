@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -91,15 +90,8 @@ const TaskForm = ({ onTaskCreated, onCancel }: TaskFormProps) => {
         assignedUserId: data.assignedUserId // Store the user ID for future reference
       };
       
+      // Call the parent's onTaskCreated callback
       onTaskCreated(newTask);
-      
-      // Save the compliance data after task creation
-      saveComplianceData();
-      
-      toast({
-        title: "Task Created",
-        description: `Task "${data.name}" has been assigned to ${selectedUser.name}.`,
-      });
       
       // Close the dialog after successful task creation
       onCancel();

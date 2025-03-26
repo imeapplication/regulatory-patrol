@@ -6,13 +6,15 @@ import Navbar from '@/components/Navbar';
 import { Copy, Check, RefreshCw } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUser } from '@/contexts/UserContext';
+import { useToast } from '@/hooks/use-toast';
 
 const JsonView = () => {
   const [copied, setCopied] = useState(false);
   const [localStorageData, setLocalStorageData] = useState<string>("");
   const { saveComplianceData } = useUser();
+  const { toast } = useToast();
   
-  useEffect(() => {
+  const loadLocalStorageData = () => {
     // Get the localStorage data as a formatted JSON string
     const data: Record<string, any> = {};
     
@@ -36,6 +38,10 @@ const JsonView = () => {
     }
     
     setLocalStorageData(JSON.stringify(data, null, 2));
+  };
+  
+  useEffect(() => {
+    loadLocalStorageData();
   }, []);
   
   const handleCopyJson = (jsonData: string) => {
@@ -50,8 +56,13 @@ const JsonView = () => {
     // Save current compliance data to localStorage
     saveComplianceData();
     
-    // Refresh the page to show the updated data
-    window.location.reload();
+    // Refresh the local storage data display
+    loadLocalStorageData();
+    
+    toast({
+      title: "Data Refreshed",
+      description: "The JSON data has been refreshed with the current state."
+    });
   };
   
   return (
