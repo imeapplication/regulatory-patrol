@@ -6,11 +6,12 @@ import { User, UserRole, getComplianceDataByDate } from '@/types/compliance';
 import Navbar from '@/components/Navbar';
 import TimeDisplay from '@/components/ui-components/TimeDisplay';
 import { Calendar } from '@/components/ui/calendar';
+import { Slider } from '@/components/ui/slider';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { format, parseISO, isAfter, isBefore } from 'date-fns';
-import { Calendar as CalendarIcon, Users, History } from 'lucide-react';
+import { format, parseISO, isAfter, isBefore, subMonths } from 'date-fns';
+import { Calendar as CalendarIcon, Users, History, Clock } from 'lucide-react';
 
 interface AllocationEntry {
   user: User;
@@ -22,8 +23,21 @@ interface AllocationEntry {
 const UserTimeline = () => {
   const { getAllUsers, getAllocationHistory } = useUser();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [timeValue, setTimeValue] = useState(100); // 0-100 representing past to present
   const users = getAllUsers();
   const allocationHistory = getAllocationHistory();
+  
+  // Update date when timeValue changes
+  useEffect(() => {
+    // For demo purposes, let's say 0 = 3 months ago, 100 = today
+    const today = new Date();
+    const threeMonthsAgo = subMonths(today, 3);
+    
+    // Calculate the date based on the slider position
+    const millisecondDiff = today.getTime() - threeMonthsAgo.getTime();
+    const newDate = new Date(threeMonthsAgo.getTime() + (millisecondDiff * timeValue / 100));
+    setSelectedDate(newDate);
+  }, [timeValue]);
   
   // Calculate user allocations based on their assigned domains and roles
   // and filter by the selected date
@@ -148,12 +162,49 @@ const UserTimeline = () => {
                 <Calendar
                   mode="single"
                   selected={selectedDate}
-                  onSelect={(date) => date && setSelectedDate(date)}
+                  onSelect={(date) => {
+                    if (date) {
+                      setSelectedDate(date);
+                      // Calculate and update the timeValue based on the selected date
+                      const today = new Date();
+                      const threeMonthsAgo = subMonths(today, 3);
+                      const totalRange = today.getTime() - threeMonthsAgo.getTime();
+                      const datePosition = date.getTime() - threeMonthsAgo.getTime();
+                      const newTimeValue = Math.max(0, Math.min(100, (datePosition / totalRange) * 100));
+                      setTimeValue(newTimeValue);
+                    }
+                  }}
                   initialFocus
                   className="pointer-events-auto"
                 />
               </PopoverContent>
             </Popover>
+          </div>
+        </div>
+        
+        {/* Time Slider */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-8">
+          <div className="text-lg font-medium flex items-center gap-2 mb-4">
+            <Clock className="h-5 w-5 text-muted-foreground" />
+            <span>Time Machine</span>
+          </div>
+          
+          <div className="space-y-4">
+            <Slider
+              value={[timeValue]}
+              onValueChange={(value) => setTimeValue(value[0])}
+              min={0}
+              max={100}
+              step={1}
+            />
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">3 months ago</span>
+              <div className="flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5" />
+                <span className="font-medium">{format(selectedDate, 'MMM d, yyyy')}</span>
+              </div>
+              <span className="text-xs text-muted-foreground">Today</span>
+            </div>
           </div>
         </div>
         
