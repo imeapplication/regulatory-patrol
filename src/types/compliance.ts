@@ -15,6 +15,7 @@ export interface Task {
   subtasks: SubTask[];
   createdAt?: string;
   updatedAt?: string;
+  assignedUserId?: string; // Added field to store the ID of the assigned regular user
 }
 
 export interface Domain {

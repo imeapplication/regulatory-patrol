@@ -3,7 +3,7 @@ import React from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { Task, getCurrentTimestamp } from '@/types/compliance';
+import { Task, getCurrentTimestamp, UserRole } from '@/types/compliance';
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -24,7 +24,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
-import { UserRole } from '@/types/compliance';
 
 const taskSchema = z.object({
   name: z.string().min(2, {
@@ -36,8 +35,8 @@ const taskSchema = z.object({
   man_day_cost: z.coerce.number().min(1, {
     message: "Man day cost must be at least 1.",
   }),
-  roles: z.string().min(1, {
-    message: "At least one role is required.",
+  assignedUserId: z.string().min(1, {
+    message: "A user must be assigned to this task.",
   }),
 });
 
@@ -52,15 +51,15 @@ const TaskForm = ({ onTaskCreated, onCancel }: TaskFormProps) => {
   const { toast } = useToast();
   const { getAllUsers } = useUser();
   
-  // Get all Domain Accountable users
+  // Get all Regular users
   const allUsers = getAllUsers();
-  const accountableUsers = allUsers.filter(user => user.role === UserRole.DomainAccountable);
+  const regularUsers = allUsers.filter(user => user.role === UserRole.Regular);
   
   const defaultValues: Partial<TaskFormValues> = {
     name: "",
     description: "",
     man_day_cost: 1,
-    roles: "",
+    assignedUserId: "",
   };
 
   const form = useForm<TaskFormValues>({
@@ -70,8 +69,14 @@ const TaskForm = ({ onTaskCreated, onCancel }: TaskFormProps) => {
 
   function onSubmit(data: TaskFormValues) {
     try {
-      // For this version, we're using a single selected user role
-      const rolesArray = [data.roles];
+      // Find the selected user to get their name
+      const selectedUser = regularUsers.find(user => user.id === data.assignedUserId);
+      if (!selectedUser) {
+        throw new Error("Selected user not found");
+      }
+      
+      // Create roles array with the selected user's name
+      const rolesArray = [selectedUser.name];
       
       const timestamp = getCurrentTimestamp();
       
@@ -82,14 +87,15 @@ const TaskForm = ({ onTaskCreated, onCancel }: TaskFormProps) => {
         roles: rolesArray,
         subtasks: [],
         createdAt: timestamp,
-        updatedAt: timestamp
+        updatedAt: timestamp,
+        assignedUserId: data.assignedUserId // Store the user ID for future reference
       };
       
       onTaskCreated(newTask);
       
       toast({
         title: "Task Created",
-        description: `Task "${data.name}" has been created successfully.`,
+        description: `Task "${data.name}" has been assigned to ${selectedUser.name}.`,
       });
     } catch (error) {
       console.error("Error creating task:", error);
@@ -152,25 +158,31 @@ const TaskForm = ({ onTaskCreated, onCancel }: TaskFormProps) => {
         
         <FormField
           control={form.control}
-          name="roles"
+          name="assignedUserId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Assign Role</FormLabel>
+              <FormLabel>Assign User</FormLabel>
               <Select 
                 onValueChange={field.onChange} 
                 defaultValue={field.value}
               >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a Domain Accountable" />
+                    <SelectValue placeholder="Select a Regular User" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {accountableUsers.map((user) => (
-                    <SelectItem key={user.id} value={user.name}>
-                      {user.name}
+                  {regularUsers.length > 0 ? (
+                    regularUsers.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="none" disabled>
+                      No regular users available
                     </SelectItem>
-                  ))}
+                  )}
                 </SelectContent>
               </Select>
               <FormMessage />
