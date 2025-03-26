@@ -54,6 +54,12 @@ const UserRoles = () => {
                     </TableCell>
                   </TableRow>
                   <TableRow>
+                    <TableCell className="font-medium">{UserRole.TaskManager}</TableCell>
+                    <TableCell>
+                      Manages specific tasks they are assigned to, can modify tasks and their subtasks
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
                     <TableCell className="font-medium">{UserRole.Regular}</TableCell>
                     <TableCell>
                       Basic access to view information without the ability to modify content
@@ -140,6 +146,20 @@ const UserRoles = () => {
                         return (
                           <TableCell key={`${role}-domains`} className="text-center">
                             {hasDomains ? 
+                              <Check className="mx-auto h-5 w-5 text-green-500" /> : 
+                              <X className="mx-auto h-5 w-5 text-red-500" />}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-medium">Task Assignment</TableCell>
+                      {roles.map(role => {
+                        const permissions = getRolePermissions(role);
+                        const hasTasks = 'manageableTasks' in permissions;
+                        return (
+                          <TableCell key={`${role}-tasks`} className="text-center">
+                            {hasTasks ? 
                               <Check className="mx-auto h-5 w-5 text-green-500" /> : 
                               <X className="mx-auto h-5 w-5 text-red-500" />}
                           </TableCell>

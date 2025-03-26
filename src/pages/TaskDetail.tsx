@@ -2,12 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { complianceData } from '@/data/complianceData';
-import { Domain, Task, SubTask } from '@/types/compliance';
+import { Domain, Task, SubTask, UserRole } from '@/types/compliance';
 import GlassCard from '@/components/ui-components/GlassCard';
 import SubTaskList from '@/components/SubTaskList';
 import Badge from '@/components/ui-components/Badge';
 import Navbar from '@/components/Navbar';
-import { ChevronRight, Users, Edit, Trash, Plus, Check } from 'lucide-react';
+import { ChevronRight, Users, Edit, Trash, Plus, Check, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useUser } from '@/contexts/UserContext';
 import { 
@@ -55,10 +55,22 @@ const TaskDetail = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { isAdmin, isDomainAccountableFor } = useUser();
+  const { 
+    isAdmin, 
+    isDomainAccountableFor, 
+    isDomainManagerFor,
+    getTaskManagerUsers,
+    assignTaskToManager,
+    removeTaskFromManager,
+    getAllUsers
+  } = useUser();
+  
   const [domain, setDomain] = useState<Domain | null>(null);
   const [task, setTask] = useState<Task | null>(null);
   const [canEditTasks, setCanEditTasks] = useState(false);
+  const [canManageTaskManagers, setCanManageTaskManagers] = useState(false);
+  const [taskManagerUsers, setTaskManagerUsers] = useState<{ id: string; name: string }[]>([]);
+  const [assignedTaskManagerId, setAssignedTaskManagerId] = useState<string>('');
   
   // Task editor state
   const [editTask, setEditTask] = useState<Task | null>(null);
@@ -112,6 +124,11 @@ const TaskDetail = () => {
       setTaskManDayCostInput(task.man_day_cost.toString());
       setTaskRolesInput(task.roles.join(', '));
       
+      // Set task manager if assigned
+      if (task.taskManagerId) {
+        setAssignedTaskManagerId(task.taskManagerId);
+      }
+      
       // Collect available roles from task and subtasks for the dropdown
       const roles = new Set<string>(task.roles);
       task.subtasks.forEach(subtask => {
@@ -133,12 +150,87 @@ const TaskDetail = () => {
   }, [task, domain]);
 
   useEffect(() => {
+    // Load Task Manager users
+    const taskManagers = getTaskManagerUsers();
+    setTaskManagerUsers(taskManagers.map(user => ({ id: user.id, name: user.name })));
+    
+    // Find currently assigned Task Manager
+    if (task && task.taskManagerId) {
+      const allUsers = getAllUsers();
+      const assignedUser = allUsers.find(user => user.id === task.taskManagerId);
+      
+      if (assignedUser && assignedUser.role === UserRole.TaskManager) {
+        setAssignedTaskManagerId(assignedUser.id);
+      }
+    }
+  }, [task, getTaskManagerUsers, getAllUsers]);
+
+  useEffect(() => {
     // Determine if user can edit tasks in this domain
     if (domainName) {
       const decodedDomainName = decodeURIComponent(domainName);
       setCanEditTasks(isAdmin || isDomainAccountableFor(decodedDomainName));
+      
+      // Determine if user can manage Task Managers
+      setCanManageTaskManagers(isAdmin || isDomainManagerFor(decodedDomainName));
     }
-  }, [domainName, isAdmin, isDomainAccountableFor]);
+  }, [domainName, isAdmin, isDomainAccountableFor, isDomainManagerFor]);
+
+  const handleTaskManagerAssignment = (userId: string) => {
+    if (!domain || !task) return;
+    
+    // If there was a previous assignment, remove it
+    if (assignedTaskManagerId && assignedTaskManagerId !== "none") {
+      removeTaskFromManager(assignedTaskManagerId, task.name);
+    }
+    
+    // If a new user is selected (not "None"), assign the task
+    if (userId !== "none") {
+      assignTaskToManager(userId, domain.name, task.name);
+      
+      // Update the task with the task manager ID
+      const updatedTask = { ...task, taskManagerId: userId };
+      
+      // Update in the domain
+      const updatedDomain = { ...domain };
+      const taskIndex = updatedDomain.tasks.findIndex(t => t.name === task.name);
+      
+      if (taskIndex !== -1) {
+        updatedDomain.tasks[taskIndex] = updatedTask;
+        setDomain(updatedDomain);
+        setTask(updatedTask);
+      }
+      
+      setAssignedTaskManagerId(userId);
+      
+      const selectedUser = taskManagerUsers.find(user => user.id === userId);
+      toast({
+        title: 'Task Manager Assigned',
+        description: `${selectedUser?.name} is now managing "${task.name}" and its subtasks.`,
+      });
+    } else {
+      // If "None" was selected, just remove the assignment
+      const updatedTask = { ...task };
+      delete updatedTask.taskManagerId;
+      
+      // Update in the domain
+      const updatedDomain = { ...domain };
+      const taskIndex = updatedDomain.tasks.findIndex(t => t.name === task.name);
+      
+      if (taskIndex !== -1) {
+        updatedDomain.tasks[taskIndex] = updatedTask;
+        setDomain(updatedDomain);
+        setTask(updatedTask);
+      }
+      
+      setAssignedTaskManagerId('');
+      
+      toast({
+        title: 'Task Manager Removed',
+        description: `No user is managing "${task.name}" now.`,
+      });
+    }
+  };
 
   const handleDeleteTask = () => {
     if (!domain || !task) return;
@@ -168,7 +260,8 @@ const TaskDetail = () => {
       description: taskDescriptionInput,
       man_day_cost: parseFloat(taskManDayCostInput) || 0,
       roles: taskRolesInput.split(',').map(role => role.trim()).filter(Boolean),
-      subtasks: task.subtasks
+      subtasks: task.subtasks,
+      taskManagerId: task.taskManagerId // Keep the task manager assignment
     };
     
     // Update in the domain
@@ -265,6 +358,9 @@ const TaskDetail = () => {
     );
   }
   
+  // Get the name of the currently assigned task manager
+  const assignedTaskManagerName = taskManagerUsers.find(user => user.id === assignedTaskManagerId)?.name;
+  
   return (
     <>
       <Navbar />
@@ -286,89 +382,140 @@ const TaskDetail = () => {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-medium">Task</h2>
             
-            {canEditTasks && (
-              <div className="flex space-x-2">
+            <div className="flex space-x-2">
+              {canEditTasks && (
+                <>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <Edit className="w-4 h-4 mr-1" /> Edit
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Edit Task</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 py-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="name">Name</Label>
+                          <Input 
+                            id="name" 
+                            value={taskNameInput}
+                            onChange={(e) => setTaskNameInput(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="description">Description</Label>
+                          <Textarea 
+                            id="description" 
+                            value={taskDescriptionInput}
+                            onChange={(e) => setTaskDescriptionInput(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="man_day_cost">Estimated effort (man-days)</Label>
+                          <Input 
+                            id="man_day_cost" 
+                            type="number" 
+                            min="0" 
+                            step="0.5"
+                            value={taskManDayCostInput}
+                            onChange={(e) => setTaskManDayCostInput(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="roles">Required roles (comma-separated)</Label>
+                          <Input 
+                            id="roles" 
+                            value={taskRolesInput}
+                            onChange={(e) => setTaskRolesInput(e.target.value)}
+                            placeholder="Role 1, Role 2, Role 3"
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button onClick={handleUpdateTask}>Save changes</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                  
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm">
+                        <Trash className="w-4 h-4 mr-1" /> Delete
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete the task "{task.name}" and all its subtasks.
+                          This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteTask}>Delete</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </>
+              )}
+
+              {canManageTaskManagers && (
                 <Dialog>
                   <DialogTrigger asChild>
                     <Button variant="outline" size="sm">
-                      <Edit className="w-4 h-4 mr-1" /> Edit
+                      <UserCheck className="w-4 h-4 mr-1" /> Assign Manager
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Edit Task</DialogTitle>
+                      <DialogTitle>Assign Task Manager</DialogTitle>
                     </DialogHeader>
-                    <div className="space-y-4 py-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="name">Name</Label>
-                        <Input 
-                          id="name" 
-                          value={taskNameInput}
-                          onChange={(e) => setTaskNameInput(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="description">Description</Label>
-                        <Textarea 
-                          id="description" 
-                          value={taskDescriptionInput}
-                          onChange={(e) => setTaskDescriptionInput(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="man_day_cost">Estimated effort (man-days)</Label>
-                        <Input 
-                          id="man_day_cost" 
-                          type="number" 
-                          min="0" 
-                          step="0.5"
-                          value={taskManDayCostInput}
-                          onChange={(e) => setTaskManDayCostInput(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="roles">Required roles (comma-separated)</Label>
-                        <Input 
-                          id="roles" 
-                          value={taskRolesInput}
-                          onChange={(e) => setTaskRolesInput(e.target.value)}
-                          placeholder="Role 1, Role 2, Role 3"
-                        />
-                      </div>
+                    <div className="py-4">
+                      <Label htmlFor="task-manager">Select Task Manager</Label>
+                      <Select
+                        value={assignedTaskManagerId || "none"}
+                        onValueChange={handleTaskManagerAssignment}
+                      >
+                        <SelectTrigger className="w-full mt-2">
+                          <SelectValue placeholder="Select Task Manager" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {taskManagerUsers.map((user) => (
+                            <SelectItem key={user.id} value={user.id}>
+                              {user.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      
+                      {taskManagerUsers.length === 0 && (
+                        <p className="text-sm text-muted-foreground mt-2">
+                          No Task Manager users available. Create one in the User Management page.
+                        </p>
+                      )}
                     </div>
-                    <DialogFooter>
-                      <Button onClick={handleUpdateTask}>Save changes</Button>
-                    </DialogFooter>
                   </DialogContent>
                 </Dialog>
-                
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="sm">
-                      <Trash className="w-4 h-4 mr-1" /> Delete
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This will permanently delete the task "{task.name}" and all its subtasks.
-                        This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleDeleteTask}>Delete</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            )}
+              )}
+            </div>
           </div>
           
           <GlassCard className="mb-8 animate-slide-down">
             <h1 className="text-2xl font-semibold">{task.name}</h1>
             <p className="mt-2 text-muted-foreground">{task.description}</p>
+            
+            {assignedTaskManagerId && (
+              <div className="mt-4 bg-blue-50 p-3 rounded-md">
+                <div className="flex items-center gap-2 text-blue-800">
+                  <UserCheck className="h-4 w-4" />
+                  <span className="font-medium">Task Manager:</span> {assignedTaskManagerName}
+                </div>
+              </div>
+            )}
             
             <div className="mt-6 flex flex-col md:flex-row gap-6">
               <div className="flex-1 p-3 bg-secondary/50 rounded-lg">

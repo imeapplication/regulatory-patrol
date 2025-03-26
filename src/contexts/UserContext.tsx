@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserRole, getRolePermissions } from '@/types/compliance';
 
@@ -26,16 +27,27 @@ const DEFAULT_USERS = [
       ...getRolePermissions(UserRole.DomainAccountable),
       accountableDomains: []
     }
+  },
+  {
+    id: "4",
+    name: "Task Manager",
+    email: "taskmanager@example.com",
+    role: UserRole.TaskManager,
+    permissions: {
+      ...getRolePermissions(UserRole.TaskManager),
+      manageableTasks: []
+    }
   }
 ];
 
 // Define the allocation history entry type
 interface AllocationHistoryEntry {
   userId: string;
-  domainName: string;
+  domainName?: string;
+  taskName?: string;
   action: 'assigned' | 'removed';
   timestamp: string;
-  role: 'DomainManager' | 'DomainAccountable';
+  role: 'DomainManager' | 'DomainAccountable' | 'TaskManager';
 }
 
 interface UserContextType {
@@ -52,9 +64,14 @@ interface UserContextType {
   removeDomainFromAccountable: (userId: string, domainName: string) => void;
   assignDomainToManager: (userId: string, domainName: string) => void;
   removeDomainFromManager: (userId: string, domainName: string) => void;
+  assignTaskToManager: (userId: string, domainName: string, taskName: string) => void;
+  removeTaskFromManager: (userId: string, taskName: string) => void;
   isDomainAccountableFor: (domainName: string) => boolean;
+  isDomainManagerFor: (domainName: string) => boolean;
+  isTaskManagerFor: (taskName: string) => boolean;
   getAllocationHistory: () => AllocationHistoryEntry[];
   getUserAllocationHistory: (userId: string) => AllocationHistoryEntry[];
+  getTaskManagerUsers: () => User[];
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -270,6 +287,72 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // Function to assign a task to a Task Manager
+  const assignTaskToManager = (userId: string, domainName: string, taskName: string) => {
+    const userToUpdate = users.find(user => user.id === userId);
+    
+    if (userToUpdate && userToUpdate.role === UserRole.TaskManager) {
+      const manageableTasks = userToUpdate.permissions.manageableTasks || [];
+      
+      // Only add if not already assigned
+      if (!manageableTasks.includes(taskName)) {
+        const updatedUser = {
+          ...userToUpdate,
+          permissions: {
+            ...userToUpdate.permissions,
+            manageableTasks: [...manageableTasks, taskName]
+          }
+        };
+        
+        updateUser(updatedUser);
+        
+        // Add history entry
+        const historyEntry: AllocationHistoryEntry = {
+          userId,
+          domainName,
+          taskName,
+          action: 'assigned',
+          timestamp: new Date().toISOString(),
+          role: 'TaskManager'
+        };
+        
+        setAllocationHistory(prev => [...prev, historyEntry]);
+      }
+    }
+  };
+
+  // Function to remove a task from a Task Manager
+  const removeTaskFromManager = (userId: string, taskName: string) => {
+    const userToUpdate = users.find(user => user.id === userId);
+    
+    if (userToUpdate && userToUpdate.role === UserRole.TaskManager) {
+      const manageableTasks = userToUpdate.permissions.manageableTasks || [];
+      
+      if (manageableTasks.includes(taskName)) {
+        const updatedUser = {
+          ...userToUpdate,
+          permissions: {
+            ...userToUpdate.permissions,
+            manageableTasks: manageableTasks.filter(task => task !== taskName)
+          }
+        };
+        
+        updateUser(updatedUser);
+        
+        // Add history entry
+        const historyEntry: AllocationHistoryEntry = {
+          userId,
+          taskName,
+          action: 'removed',
+          timestamp: new Date().toISOString(),
+          role: 'TaskManager'
+        };
+        
+        setAllocationHistory(prev => [...prev, historyEntry]);
+      }
+    }
+  };
+
   const isDomainAccountableFor = (domainName: string): boolean => {
     if (!currentUser || currentUser.role !== UserRole.DomainAccountable) {
       return false;
@@ -279,6 +362,26 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     return accountableDomains.includes(domainName);
   };
 
+  // Function to check if current user is manager for a domain
+  const isDomainManagerFor = (domainName: string): boolean => {
+    if (!currentUser || currentUser.role !== UserRole.DomainManager) {
+      return false;
+    }
+    
+    const manageableDomains = currentUser.permissions.manageableDomains || [];
+    return manageableDomains.includes(domainName);
+  };
+
+  // Function to check if current user is manager for a task
+  const isTaskManagerFor = (taskName: string): boolean => {
+    if (!currentUser || currentUser.role !== UserRole.TaskManager) {
+      return false;
+    }
+    
+    const manageableTasks = currentUser.permissions.manageableTasks || [];
+    return manageableTasks.includes(taskName);
+  };
+
   // Functions to access allocation history
   const getAllocationHistory = (): AllocationHistoryEntry[] => {
     return allocationHistory;
@@ -286,6 +389,11 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
   const getUserAllocationHistory = (userId: string): AllocationHistoryEntry[] => {
     return allocationHistory.filter(entry => entry.userId === userId);
+  };
+
+  // Function to get all Task Manager users
+  const getTaskManagerUsers = (): User[] => {
+    return users.filter(user => user.role === UserRole.TaskManager);
   };
 
   const isAdmin = currentUser?.role === UserRole.Administrator;
@@ -305,9 +413,14 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       removeDomainFromAccountable,
       assignDomainToManager,
       removeDomainFromManager,
+      assignTaskToManager,
+      removeTaskFromManager,
       isDomainAccountableFor,
+      isDomainManagerFor,
+      isTaskManagerFor,
       getAllocationHistory,
-      getUserAllocationHistory
+      getUserAllocationHistory,
+      getTaskManagerUsers
     }}>
       {children}
     </UserContext.Provider>

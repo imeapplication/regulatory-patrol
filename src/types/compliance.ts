@@ -1,3 +1,4 @@
+
 export interface SubTask {
   name: string;
   description: string;
@@ -13,6 +14,7 @@ export interface Task {
   man_day_cost: number;
   roles: string[];
   subtasks: SubTask[];
+  taskManagerId?: string;  // The user ID managing this task
   createdAt?: string;
   updatedAt?: string;
 }
@@ -47,6 +49,7 @@ export enum UserRole {
   Administrator = "Administrator",
   DomainAccountable = "Domain Accountable",
   DomainManager = "Domain Manager",
+  TaskManager = "Task Manager",  // Added new role
   Regular = "Regular"
 }
 
@@ -58,6 +61,7 @@ export interface UserPermissions {
   canViewReports: boolean;
   manageableDomains?: string[]; // For Domain Managers
   accountableDomains?: string[]; // For Domain Accountables
+  manageableTasks?: string[];   // For Task Managers
 }
 
 export interface User {
@@ -96,6 +100,15 @@ export const getRolePermissions = (role: UserRole): UserPermissions => {
         canAssignRoles: false,
         canViewReports: true,
         manageableDomains: []
+      };
+    case UserRole.TaskManager:
+      return {
+        canAddItems: false,
+        canModifyItems: true,
+        canDeleteItems: false,
+        canAssignRoles: false,
+        canViewReports: true,
+        manageableTasks: []
       };
     case UserRole.Regular:
       return {
