@@ -80,9 +80,9 @@ export const useTaskManagement = ({
     }
   };
 
-  // Function to get all Task Manager users
-  const getTaskManagerUsers = (allUsers: User[]): User[] => {
-    return allUsers.filter(user => user.role === UserRole.TaskManager);
+  // Function to get all Task Manager users - fix the parameter issue
+  const getTaskManagerUsers = (): User[] => {
+    return users.filter(user => user.role === UserRole.TaskManager);
   };
 
   return {
