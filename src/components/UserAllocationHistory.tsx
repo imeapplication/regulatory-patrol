@@ -18,6 +18,16 @@ import { Button } from '@/components/ui/button';
 import Badge from '@/components/ui-components/Badge';
 import { useUser } from '@/contexts/UserContext';
 
+// Import the AllocationHistoryEntry type from UserContext
+type AllocationHistoryEntry = {
+  userId: string;
+  domainName?: string;
+  taskName?: string;
+  action: 'assigned' | 'removed';
+  timestamp: string;
+  role: 'DomainManager' | 'DomainAccountable' | 'TaskManager';
+};
+
 interface UserAllocationHistoryProps {
   user: User | null;
   isOpen: boolean;
@@ -28,12 +38,7 @@ const UserAllocationHistory = ({ user, isOpen, onOpenChange }: UserAllocationHis
   const { getUserAllocationHistory } = useUser();
   const [timeValue, setTimeValue] = useState(100); // 0-100 representing past to present
   const [date, setDate] = useState<Date>(new Date());
-  const [allocationHistory, setAllocationHistory] = useState<Array<{
-    domainName: string;
-    action: string;
-    timestamp: string;
-    role: string;
-  }>>([]);
+  const [allocationHistory, setAllocationHistory] = useState<AllocationHistoryEntry[]>([]);
   
   // Update date when timeValue changes
   useEffect(() => {
@@ -63,6 +68,7 @@ const UserAllocationHistory = ({ user, isOpen, onOpenChange }: UserAllocationHis
     // Initialize sets to track domains
     const accountableDomains = new Set<string>();
     const manageableDomains = new Set<string>();
+    const manageableTasks = new Set<string>();
     
     // Process allocation history to determine current domains
     allocationHistory.forEach(entry => {
@@ -70,17 +76,23 @@ const UserAllocationHistory = ({ user, isOpen, onOpenChange }: UserAllocationHis
       
       // Only consider entries up to the current selected date
       if (!isAfter(entryDate, date)) {
-        if (entry.role === 'DomainAccountable') {
+        if (entry.role === 'DomainAccountable' && entry.domainName) {
           if (entry.action === 'assigned') {
             accountableDomains.add(entry.domainName);
           } else if (entry.action === 'removed') {
             accountableDomains.delete(entry.domainName);
           }
-        } else if (entry.role === 'DomainManager') {
+        } else if (entry.role === 'DomainManager' && entry.domainName) {
           if (entry.action === 'assigned') {
             manageableDomains.add(entry.domainName);
           } else if (entry.action === 'removed') {
             manageableDomains.delete(entry.domainName);
+          }
+        } else if (entry.role === 'TaskManager' && entry.taskName) {
+          if (entry.action === 'assigned') {
+            manageableTasks.add(entry.taskName);
+          } else if (entry.action === 'removed') {
+            manageableTasks.delete(entry.taskName);
           }
         }
       }
@@ -88,12 +100,15 @@ const UserAllocationHistory = ({ user, isOpen, onOpenChange }: UserAllocationHis
     
     // Combine domains based on user role
     let domains: string[] = [];
+    let tasks: string[] = [];
     let totalManDays = 0;
     
     if (user.role === UserRole.DomainAccountable) {
       domains = [...accountableDomains];
     } else if (user.role === UserRole.DomainManager) {
       domains = [...manageableDomains];
+    } else if (user.role === UserRole.TaskManager) {
+      tasks = [...manageableTasks];
     }
     
     // Calculate man days
@@ -104,17 +119,30 @@ const UserAllocationHistory = ({ user, isOpen, onOpenChange }: UserAllocationHis
       }
     });
     
+    // Add man days for tasks if the user is a Task Manager
+    tasks.forEach(taskName => {
+      // Find the task in any domain
+      for (const domain of complianceData.regulations.domains) {
+        const task = domain.tasks.find(t => t.name === taskName);
+        if (task) {
+          totalManDays += task.man_day_cost;
+          break;
+        }
+      }
+    });
+    
     // Simulate creation date (would come from user data in real app)
     const createdAt = '2023-01-15T10:30:00Z';
     
     return { 
       domains,
+      tasks,
       totalManDays,
       createdAt
     };
   };
   
-  const { domains, totalManDays, createdAt } = calculateAllocations();
+  const { domains, tasks, totalManDays, createdAt } = calculateAllocations();
   
   // Filter history entries by date
   const filteredHistory = allocationHistory.filter(entry => {
@@ -182,17 +210,37 @@ const UserAllocationHistory = ({ user, isOpen, onOpenChange }: UserAllocationHis
                 </Badge>
               </div>
               
-              {domains.length > 0 ? (
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {domains.map(domain => (
-                    <Badge key={domain} variant="secondary" className="text-xs">
-                      {domain}
-                    </Badge>
-                  ))}
-                </div>
-              ) : (
+              {/* Show domains if applicable */}
+              {domains.length > 0 && (
+                <>
+                  <div className="text-sm font-medium mt-3 mb-2">Domains:</div>
+                  <div className="flex flex-wrap gap-2">
+                    {domains.map(domain => (
+                      <Badge key={domain} variant="secondary" className="text-xs">
+                        {domain}
+                      </Badge>
+                    ))}
+                  </div>
+                </>
+              )}
+              
+              {/* Show tasks if applicable */}
+              {tasks && tasks.length > 0 && (
+                <>
+                  <div className="text-sm font-medium mt-3 mb-2">Tasks:</div>
+                  <div className="flex flex-wrap gap-2">
+                    {tasks.map(task => (
+                      <Badge key={task} variant="secondary" className="text-xs bg-blue-100">
+                        {task}
+                      </Badge>
+                    ))}
+                  </div>
+                </>
+              )}
+              
+              {domains.length === 0 && (!tasks || tasks.length === 0) && (
                 <div className="text-sm text-muted-foreground italic mt-2">
-                  No domains assigned at this time
+                  No domains or tasks assigned at this time
                 </div>
               )}
             </div>
@@ -208,7 +256,7 @@ const UserAllocationHistory = ({ user, isOpen, onOpenChange }: UserAllocationHis
                       <div className="flex justify-between items-start">
                         <div>
                           <span className="text-sm font-medium">
-                            {entry.action === 'assigned' ? 'Assigned to' : 'Removed from'} {entry.domainName}
+                            {entry.action === 'assigned' ? 'Assigned to' : 'Removed from'} {entry.domainName || entry.taskName}
                           </span>
                           <div className="text-xs text-muted-foreground mt-1">
                             Role: {entry.role}
