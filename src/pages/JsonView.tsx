@@ -4,7 +4,7 @@ import { complianceData } from '@/data/complianceData';
 import GlassCard from '@/components/ui-components/GlassCard';
 import Navbar from '@/components/Navbar';
 import { Copy, Check, RefreshCw } from 'lucide-react';
-import { Tab, Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUser } from '@/contexts/UserContext';
 
 const JsonView = () => {
