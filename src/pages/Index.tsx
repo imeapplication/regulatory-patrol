@@ -1,9 +1,8 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@apollo/client';
-import { GET_DOMAINS, GET_USERS } from '@/graphql/queries';
-import { Domain } from '@/types/graphqlTypes';
+import { complianceData } from '@/data/complianceData';
+import { Domain } from '@/types/compliance';
 import GlassCard from '@/components/ui-components/GlassCard';
 import DomainCard from '@/components/DomainCard';
 import AnimatedCounter from '@/components/ui-components/AnimatedCounter';
@@ -25,16 +24,23 @@ const Index = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isHistoricalView, setIsHistoricalView] = useState(false);
   
-  const { loading: loadingDomains, error: domainsError, data: domainsData } = useQuery(GET_DOMAINS);
-  const { loading: loadingUsers, error: usersError, data: usersData } = useQuery(GET_USERS);
-  
-  const loading = loadingDomains || loadingUsers;
-  const error = domainsError || usersError;
-  
-  const domains = domainsData?.domains || [];
+  // Map domains from the compliance data
+  const domains = complianceData.regulations.domains.map(domain => ({
+    id: domain.name,
+    title: domain.name,
+    description: domain.description,
+    mandays: domain.man_day_cost,
+    tasks: domain.tasks.map(task => ({
+      id: task.name,
+      title: task.name,
+      description: task.description,
+      mandays: task.man_day_cost,
+      status: 0
+    }))
+  }));
   
   const handleDomainClick = (domain: Domain) => {
-    navigate(`/domain/${domain.id}`);
+    navigate(`/domain/${encodeURIComponent(domain.title)}`);
   };
 
   const handleDateSelect = (date: Date | undefined) => {
@@ -52,47 +58,16 @@ const Index = () => {
   // Calculate total mandays
   const totalManDays = domains.reduce((sum: number, domain: Domain) => sum + domain.mandays, 0);
   
-  // Get unique roles from users
+  // Get unique roles from compliance data
   const allRoles = new Set<string>();
-  if (usersData?.users) {
-    usersData.users.forEach((user: any) => {
-      if (user.role) {
-        allRoles.add(user.role);
-      }
+  complianceData.regulations.domains.forEach(domain => {
+    domain.tasks.forEach(task => {
+      task.roles.forEach(role => allRoles.add(role));
+      task.subtasks.forEach(subtask => {
+        subtask.role.forEach(role => allRoles.add(role));
+      });
     });
-  }
-
-  if (loading) {
-    return (
-      <>
-        <Navbar />
-        <main className="pt-24 pb-12 px-4 min-h-screen bg-gradient-to-b from-white to-blue-50">
-          <div className="container mx-auto max-w-6xl flex items-center justify-center">
-            <div className="text-center">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-              <p className="text-lg">Loading compliance data...</p>
-            </div>
-          </div>
-        </main>
-      </>
-    );
-  }
-
-  if (error) {
-    return (
-      <>
-        <Navbar />
-        <main className="pt-24 pb-12 px-4 min-h-screen bg-gradient-to-b from-white to-blue-50">
-          <div className="container mx-auto max-w-6xl">
-            <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
-              <h2 className="text-lg font-medium text-red-800 mb-2">Error loading data</h2>
-              <p className="text-red-600">{error.message}</p>
-            </div>
-          </div>
-        </main>
-      </>
-    );
-  }
+  });
 
   return (
     <>

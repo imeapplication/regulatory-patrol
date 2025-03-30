@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Domain } from '@/types/graphqlTypes';
+import { Domain } from '@/types/compliance';
 import GlassCard from './ui-components/GlassCard';
 import Badge from './ui-components/Badge';
 import AnimatedCounter from './ui-components/AnimatedCounter';

@@ -1,9 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation } from '@apollo/client';
-import { GET_DOMAIN, GET_USERS } from '@/graphql/queries';
-import { CREATE_TASK } from '@/graphql/mutations';
+import { complianceData } from '@/data/complianceData';
+import { Domain as ComplianceDomain } from '@/types/compliance';
 import { Domain, Task, User } from '@/types/graphqlTypes';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
@@ -20,41 +19,63 @@ const DomainDetail = () => {
   const { toast } = useToast();
   const { isAdmin, currentUser } = useUser();
   
-  const { loading: loadingDomain, error: domainError, data: domainData, refetch } = 
-    useQuery(GET_DOMAIN, { variables: { id: domainId } });
+  const [loading, setLoading] = useState(true);
+  const [domain, setDomain] = useState<Domain | null>(null);
   
-  const { loading: loadingUsers, error: usersError, data: usersData } = useQuery(GET_USERS);
-  
-  const [createTask] = useMutation(CREATE_TASK, {
-    onCompleted: () => {
-      refetch();
-      toast({
-        title: "Task Created",
-        description: "Task has been successfully created.",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to create task: ${error.message}`,
-        variant: "destructive",
-      });
+  useEffect(() => {
+    setLoading(true);
+    // Find domain in complianceData
+    if (domainId) {
+      const complianceDomain = complianceData.regulations.domains.find(
+        (d: ComplianceDomain) => d.name === decodeURIComponent(domainId)
+      );
+      
+      if (complianceDomain) {
+        // Map to the required format
+        const mappedDomain: Domain = {
+          id: complianceDomain.name,
+          title: complianceDomain.name,
+          description: complianceDomain.description,
+          startDate: new Date().toISOString(),
+          endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+          mandays: complianceDomain.man_day_cost,
+          responsible: complianceDomain.accountableRole ? {
+            id: '1',
+            firstName: complianceDomain.accountableRole,
+            lastName: '',
+            role: complianceDomain.accountableRole
+          } : undefined,
+          tasks: complianceDomain.tasks.map(task => ({
+            id: task.name,
+            title: task.name,
+            description: task.description,
+            startDate: new Date().toISOString(),
+            endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            mandays: task.man_day_cost,
+            status: 0,
+            owner: task.roles && task.roles.length > 0 ? {
+              id: '1',
+              firstName: task.roles[0],
+              lastName: '',
+              role: task.roles[0]
+            } : undefined
+          }))
+        };
+        
+        setDomain(mappedDomain);
+      }
     }
-  });
+    setLoading(false);
+  }, [domainId]);
   
-  const loading = loadingDomain || loadingUsers;
-  const error = domainError || usersError;
-  
-  const domain = domainData?.domain;
-  const users = usersData?.users || [];
-  
-  // Filter users who can be domain accountable (based on their role)
-  const accountableUsers = users
-    .filter((user: User) => user.role === "Domain Accountable")
-    .map((user: User) => ({ 
-      id: user.id, 
-      name: `${user.firstName} ${user.lastName}` 
-    }));
+  // Mock users for the accountable dropdown
+  const accountableUsers = [
+    { id: '1', name: 'DPO' },
+    { id: '2', name: 'Environmental Officer' },
+    { id: '3', name: 'Compliance Officer' },
+    { id: '4', name: 'CFO' },
+    { id: '5', name: 'Quality Director' }
+  ];
   
   // Find currently assigned accountable user
   const assignedAccountableId = domain?.responsible?.id || '';
@@ -69,24 +90,38 @@ const DomainDetail = () => {
   };
 
   const handleTaskCreated = (newTask: Partial<Task>) => {
-    createTask({
-      variables: {
+    toast({
+      title: "Task Created",
+      description: "Task has been successfully created.",
+    });
+    
+    // In a real app, we'd update the domain with the new task
+    // For now, we'll just simulate it
+    if (domain && newTask.title) {
+      const updatedDomain = { ...domain };
+      const newTaskObj: Task = {
+        id: `task-${Date.now()}`,
         title: newTask.title,
-        ownerId: newTask.owner?.id || currentUser?.id,
-        startDate: new Date().toISOString().split('T')[0],
-        endDate: new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0],
-        domainId: domainId,
         description: newTask.description,
         documentLink: newTask.documentLink,
-        mandays: newTask.mandays || 1
-      }
-    });
+        startDate: new Date().toISOString(),
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        mandays: newTask.mandays || 1,
+        status: 0,
+        owner: newTask.owner || currentUser
+      };
+      
+      updatedDomain.tasks = [...(updatedDomain.tasks || []), newTaskObj];
+      setDomain(updatedDomain);
+    }
   };
 
   const canManageTasks = isAdmin || (currentUser?.id === assignedAccountableId);
 
   const onSelectTask = (task: Task) => {
-    navigate(`/domain/${domainId}/task/${task.id}`);
+    if (domain) {
+      navigate(`/domain/${encodeURIComponent(domain.title)}/task/${encodeURIComponent(task.title)}`);
+    }
   };
 
   if (loading) {
@@ -105,7 +140,7 @@ const DomainDetail = () => {
     );
   }
 
-  if (error || !domain) {
+  if (!domain) {
     return (
       <>
         <Navbar />
@@ -113,7 +148,6 @@ const DomainDetail = () => {
           <Card className="bg-white border-none shadow-lg animate-fade-in">
             <CardContent className="p-6">
               <p>Domain not found or error loading data.</p>
-              {error && <p className="text-red-600 mt-2">{error.message}</p>}
               <Button asChild className="mt-4">
                 <Link to="/">Go Back</Link>
               </Button>
