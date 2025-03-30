@@ -24,7 +24,7 @@ const DomainCard = ({ domain, onClick }: DomainCardProps) => {
         <Badge variant="primary" className="mb-3">
           {tasksCount} {tasksCount === 1 ? 'Task' : 'Tasks'}
         </Badge>
-        <h3 className="text-xl font-semibold mb-2">{domain.title}</h3>
+        <h3 className="text-xl font-semibold mb-2">{domain.name}</h3>
         <p className="text-muted-foreground text-sm line-clamp-3">{domain.description || 'No description available'}</p>
       </div>
       
@@ -32,7 +32,7 @@ const DomainCard = ({ domain, onClick }: DomainCardProps) => {
         <div className="flex items-center space-x-1.5">
           <span className="text-muted-foreground text-sm">Effort:</span>
           <AnimatedCounter 
-            end={domain.mandays} 
+            end={domain.man_day_cost} 
             className="font-medium" 
             suffix=" man-days"
           />

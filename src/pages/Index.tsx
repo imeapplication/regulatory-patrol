@@ -10,7 +10,7 @@ import TimeDisplay from '@/components/ui-components/TimeDisplay';
 import Navbar from '@/components/Navbar';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, RotateCcw, Loader2 } from 'lucide-react';
+import { CalendarIcon, RotateCcw } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   Popover,
@@ -24,23 +24,11 @@ const Index = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isHistoricalView, setIsHistoricalView] = useState(false);
   
-  // Map domains from the compliance data
-  const domains = complianceData.regulations.domains.map(domain => ({
-    id: domain.name,
-    title: domain.name,
-    description: domain.description,
-    mandays: domain.man_day_cost,
-    tasks: domain.tasks.map(task => ({
-      id: task.name,
-      title: task.name,
-      description: task.description,
-      mandays: task.man_day_cost,
-      status: 0
-    }))
-  }));
+  // Map domains from the compliance data - using the original domains directly
+  const domains = complianceData.regulations.domains;
   
   const handleDomainClick = (domain: Domain) => {
-    navigate(`/domain/${encodeURIComponent(domain.title)}`);
+    navigate(`/domain/${encodeURIComponent(domain.name)}`);
   };
 
   const handleDateSelect = (date: Date | undefined) => {
@@ -56,7 +44,7 @@ const Index = () => {
   };
   
   // Calculate total mandays
-  const totalManDays = domains.reduce((sum: number, domain: Domain) => sum + domain.mandays, 0);
+  const totalManDays = domains.reduce((sum: number, domain: Domain) => sum + domain.man_day_cost, 0);
   
   // Get unique roles from compliance data
   const allRoles = new Set<string>();
@@ -152,7 +140,7 @@ const Index = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {domains.map((domain: Domain) => (
                 <DomainCard 
-                  key={domain.id}
+                  key={domain.name}
                   domain={domain}
                   onClick={() => handleDomainClick(domain)}
                 />

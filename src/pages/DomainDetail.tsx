@@ -3,15 +3,43 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { complianceData } from '@/data/complianceData';
 import { Domain as ComplianceDomain } from '@/types/compliance';
-import { Domain, Task, User } from '@/types/graphqlTypes';
+import { Task, User } from '@/types/graphqlTypes';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
 import DomainInfo from '@/components/domain/DomainInfo';
 import DomainTasks from '@/components/domain/DomainTasks';
 import { Card, CardContent } from '@/components/ui/card';
+import { Loader2 } from 'lucide-react';
+
+// Define a domain interface that works with our components
+interface DomainForUI {
+  id: string;
+  title: string;
+  description?: string;
+  documentLink?: string;
+  responsible?: User;
+  startDate: string;
+  endDate: string;
+  mandays: number;
+  tasks?: TaskForUI[];
+}
+
+interface TaskForUI {
+  id: string;
+  title: string;
+  description?: string;
+  documentLink?: string;
+  startDate: string;
+  endDate: string;
+  mandays: number;
+  status: number;
+  owner?: User;
+  subtasks?: TaskForUI[];
+  actions?: any[];
+}
 
 const DomainDetail = () => {
   const { domainId } = useParams<{ domainId: string }>();
@@ -20,7 +48,7 @@ const DomainDetail = () => {
   const { isAdmin, currentUser } = useUser();
   
   const [loading, setLoading] = useState(true);
-  const [domain, setDomain] = useState<Domain | null>(null);
+  const [domain, setDomain] = useState<DomainForUI | null>(null);
   
   useEffect(() => {
     setLoading(true);
@@ -32,7 +60,7 @@ const DomainDetail = () => {
       
       if (complianceDomain) {
         // Map to the required format
-        const mappedDomain: Domain = {
+        const mappedDomain: DomainForUI = {
           id: complianceDomain.name,
           title: complianceDomain.name,
           description: complianceDomain.description,
@@ -89,7 +117,7 @@ const DomainDetail = () => {
     });
   };
 
-  const handleTaskCreated = (newTask: Partial<Task>) => {
+  const handleTaskCreated = (newTask: Partial<TaskForUI>) => {
     toast({
       title: "Task Created",
       description: "Task has been successfully created.",
@@ -99,7 +127,7 @@ const DomainDetail = () => {
     // For now, we'll just simulate it
     if (domain && newTask.title) {
       const updatedDomain = { ...domain };
-      const newTaskObj: Task = {
+      const newTaskObj: TaskForUI = {
         id: `task-${Date.now()}`,
         title: newTask.title,
         description: newTask.description,
@@ -118,7 +146,7 @@ const DomainDetail = () => {
 
   const canManageTasks = isAdmin || (currentUser?.id === assignedAccountableId);
 
-  const onSelectTask = (task: Task) => {
+  const onSelectTask = (task: TaskForUI) => {
     if (domain) {
       navigate(`/domain/${encodeURIComponent(domain.title)}/task/${encodeURIComponent(task.title)}`);
     }
@@ -166,14 +194,14 @@ const DomainDetail = () => {
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6 animate-fade-in">
             <Link to="/" className="hover:text-foreground">Dashboard</Link>
             <ArrowLeft className="h-4 w-4" />
-            <span className="font-medium text-foreground">{domain.title}</span>
+            <span className="font-medium text-foreground">{domain?.title}</span>
           </div>
 
           <Card className="border-none shadow-lg mb-8 overflow-hidden animate-slide-down">
             <CardContent className="p-0">
               <DomainInfo 
-                domain={domain}
-                domainName={domain.title}
+                domain={domain as any}
+                domainName={domain?.title}
                 isAdmin={isAdmin}
                 accountableUsers={accountableUsers}
                 assignedAccountableId={assignedAccountableId}
@@ -185,7 +213,7 @@ const DomainDetail = () => {
           <Card className="border-none shadow-lg overflow-hidden animate-slide-up">
             <CardContent className="p-0">
               <DomainTasks 
-                domain={domain}
+                domain={domain as any}
                 canManageTasks={canManageTasks}
                 onTaskCreated={handleTaskCreated}
                 onSelectTask={onSelectTask}
