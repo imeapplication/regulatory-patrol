@@ -2,7 +2,7 @@
 import { ApolloClient, InMemoryCache, createHttpLink } from '@apollo/client';
 
 const httpLink = createHttpLink({
-  uri: 'http://compdash.homelinux.com:8000/',
+  uri: 'http://compdash.homelinux.com:8000/graphql/',
 });
 
 export const client = new ApolloClient({
