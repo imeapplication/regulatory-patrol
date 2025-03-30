@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { complianceData } from '@/data/complianceData';
@@ -105,7 +104,7 @@ const DomainDetail = () => {
     { id: '5', name: 'Quality Director' }
   ];
   
-  // Find currently assigned accountable user
+  // Find currently assigned accountable id
   const assignedAccountableId = domain?.responsible?.id || '';
   
   const handleAccountableAssignment = (userId: string) => {
@@ -136,7 +135,12 @@ const DomainDetail = () => {
         endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         mandays: newTask.mandays || 1,
         status: 0,
-        owner: newTask.owner || currentUser
+        owner: newTask.owner || (currentUser ? {
+          id: currentUser.id,
+          firstName: currentUser.name || '',
+          lastName: '',
+          role: currentUser.role || ''
+        } : undefined)
       };
       
       updatedDomain.tasks = [...(updatedDomain.tasks || []), newTaskObj];
