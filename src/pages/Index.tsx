@@ -1,7 +1,9 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { complianceData } from '@/data/complianceData';
-import { Domain, Task, getComplianceDataByDate } from '@/types/compliance';
+import { useQuery } from '@apollo/client';
+import { GET_DOMAINS, GET_USERS } from '@/graphql/queries';
+import { Domain } from '@/types/graphqlTypes';
 import GlassCard from '@/components/ui-components/GlassCard';
 import DomainCard from '@/components/DomainCard';
 import AnimatedCounter from '@/components/ui-components/AnimatedCounter';
@@ -9,7 +11,7 @@ import TimeDisplay from '@/components/ui-components/TimeDisplay';
 import Navbar from '@/components/Navbar';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, RotateCcw } from 'lucide-react';
+import { CalendarIcon, RotateCcw, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   Popover,
@@ -23,23 +25,16 @@ const Index = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isHistoricalView, setIsHistoricalView] = useState(false);
   
-  const filteredData = isHistoricalView && selectedDate 
-    ? getComplianceDataByDate(complianceData, selectedDate) 
-    : complianceData;
+  const { loading: loadingDomains, error: domainsError, data: domainsData } = useQuery(GET_DOMAINS);
+  const { loading: loadingUsers, error: usersError, data: usersData } = useQuery(GET_USERS);
   
-  const { regulations } = filteredData;
+  const loading = loadingDomains || loadingUsers;
+  const error = domainsError || usersError;
   
-  const totalManDays = regulations.domains.reduce((sum, domain) => sum + domain.man_day_cost, 0);
-  
-  const allRoles = new Set<string>();
-  regulations.domains.forEach(domain => {
-    domain.tasks.forEach(task => {
-      task.roles.forEach(role => allRoles.add(role));
-    });
-  });
+  const domains = domainsData?.domains || [];
   
   const handleDomainClick = (domain: Domain) => {
-    navigate(`/domain/${encodeURIComponent(domain.name)}`, { state: { domain } });
+    navigate(`/domain/${domain.id}`);
   };
 
   const handleDateSelect = (date: Date | undefined) => {
@@ -53,6 +48,51 @@ const Index = () => {
     setSelectedDate(new Date());
     setIsHistoricalView(false);
   };
+  
+  // Calculate total mandays
+  const totalManDays = domains.reduce((sum: number, domain: Domain) => sum + domain.mandays, 0);
+  
+  // Get unique roles from users
+  const allRoles = new Set<string>();
+  if (usersData?.users) {
+    usersData.users.forEach((user: any) => {
+      if (user.role) {
+        allRoles.add(user.role);
+      }
+    });
+  }
+
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <main className="pt-24 pb-12 px-4 min-h-screen bg-gradient-to-b from-white to-blue-50">
+          <div className="container mx-auto max-w-6xl flex items-center justify-center">
+            <div className="text-center">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+              <p className="text-lg">Loading compliance data...</p>
+            </div>
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <Navbar />
+        <main className="pt-24 pb-12 px-4 min-h-screen bg-gradient-to-b from-white to-blue-50">
+          <div className="container mx-auto max-w-6xl">
+            <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
+              <h2 className="text-lg font-medium text-red-800 mb-2">Error loading data</h2>
+              <p className="text-red-600">{error.message}</p>
+            </div>
+          </div>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
@@ -64,7 +104,7 @@ const Index = () => {
               <div className="animate-slide-down">
                 <h1 className="text-3xl md:text-4xl font-semibold mb-3">Regulatory Compliance</h1>
                 <p className="text-muted-foreground max-w-3xl">
-                  {regulations.description}
+                  Manage your company's regulatory compliance requirements
                 </p>
               </div>
               
@@ -119,7 +159,7 @@ const Index = () => {
               <GlassCard className="text-center">
                 <h3 className="text-lg font-medium mb-2">Domains</h3>
                 <p className="text-3xl font-semibold text-primary">
-                  <AnimatedCounter end={regulations.domains.length} />
+                  <AnimatedCounter end={domains.length} />
                 </p>
               </GlassCard>
               
@@ -135,9 +175,9 @@ const Index = () => {
           <section>
             <h2 className="text-2xl font-semibold mb-6">Compliance Domains</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {regulations.domains.map((domain, index) => (
+              {domains.map((domain: Domain) => (
                 <DomainCard 
-                  key={`${domain.name}-${index}`}
+                  key={domain.id}
                   domain={domain}
                   onClick={() => handleDomainClick(domain)}
                 />

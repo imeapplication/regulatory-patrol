@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Domain } from '@/types/compliance';
+import { Domain } from '@/types/graphqlTypes';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -28,7 +28,7 @@ const DomainInfo = ({
     <div className="p-6 bg-white rounded-lg">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
         <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-          {domain.name}
+          {domain.title}
         </h1>
         
         {isAdmin && (
@@ -66,7 +66,7 @@ const DomainInfo = ({
       )}
 
       <p className="text-gray-700 mb-8 leading-relaxed">
-        {domain.description}
+        {domain.description || 'No description available.'}
       </p>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
@@ -77,7 +77,7 @@ const DomainInfo = ({
               <span className="text-sm font-medium">Estimated Effort</span>
             </div>
             <div className="text-2xl font-bold text-blue-700">
-              <AnimatedCounter end={domain.man_day_cost} suffix=" man-days" />
+              <AnimatedCounter end={domain.mandays} suffix=" man-days" />
             </div>
           </CardContent>
         </Card>
@@ -89,12 +89,12 @@ const DomainInfo = ({
               <span className="text-sm font-medium">Total Tasks</span>
             </div>
             <div className="text-2xl font-bold text-green-700">
-              <AnimatedCounter end={domain.tasks.length} />
+              <AnimatedCounter end={domain.tasks?.length || 0} />
             </div>
           </CardContent>
         </Card>
         
-        {domain.accountableRole && (
+        {domain.responsible && (
           <Card className="border shadow-sm bg-gradient-to-br from-blue-50 to-white">
             <CardContent className="p-4 flex flex-col items-center justify-center text-center">
               <div className="text-purple-500 mb-2">
@@ -102,7 +102,7 @@ const DomainInfo = ({
                 <span className="text-sm font-medium">Accountable Role</span>
               </div>
               <div className="text-md font-semibold text-purple-700 bg-purple-50 px-3 py-1 rounded-full">
-                {domain.accountableRole}
+                {domain.responsible.role || 'Not assigned'}
               </div>
             </CardContent>
           </Card>

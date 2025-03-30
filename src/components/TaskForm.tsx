@@ -3,7 +3,7 @@ import React from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { Task, getCurrentTimestamp } from '@/types/compliance';
+import { Task } from '@/types/graphqlTypes';
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -24,43 +24,45 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
-import { UserRole } from '@/types/compliance';
+import { useQuery } from '@apollo/client';
+import { GET_USERS } from '@/graphql/queries';
 
 const taskSchema = z.object({
-  name: z.string().min(2, {
+  title: z.string().min(2, {
     message: "Task name must be at least 2 characters.",
   }),
   description: z.string().min(5, {
     message: "Description must be at least 5 characters.",
   }),
-  man_day_cost: z.coerce.number().min(1, {
+  mandays: z.coerce.number().min(1, {
     message: "Man day cost must be at least 1.",
   }),
-  roles: z.string().min(1, {
-    message: "At least one role is required.",
+  ownerId: z.string().min(1, {
+    message: "An owner is required.",
   }),
 });
 
 type TaskFormValues = z.infer<typeof taskSchema>;
 
 interface TaskFormProps {
-  onTaskCreated: (task: Task) => void;
+  onTaskCreated: (task: Partial<Task>) => void;
   onCancel: () => void;
 }
 
 const TaskForm = ({ onTaskCreated, onCancel }: TaskFormProps) => {
   const { toast } = useToast();
-  const { getAllUsers } = useUser();
+  const { currentUser } = useUser();
   
-  // Get all Domain Accountable users
-  const allUsers = getAllUsers();
-  const accountableUsers = allUsers.filter(user => user.role === UserRole.DomainAccountable);
+  const { loading, error, data } = useQuery(GET_USERS);
+  
+  // Get all users who can be task owners
+  const users = data?.users || [];
   
   const defaultValues: Partial<TaskFormValues> = {
-    name: "",
+    title: "",
     description: "",
-    man_day_cost: 1,
-    roles: "",
+    mandays: 1,
+    ownerId: currentUser?.id || "",
   };
 
   const form = useForm<TaskFormValues>({
@@ -70,35 +72,43 @@ const TaskForm = ({ onTaskCreated, onCancel }: TaskFormProps) => {
 
   function onSubmit(data: TaskFormValues) {
     try {
-      // For this version, we're using a single selected user role
-      const rolesArray = [data.roles];
+      // Find the selected user
+      const selectedUser = users.find((user: any) => user.id === data.ownerId);
       
-      const timestamp = getCurrentTimestamp();
-      
-      const newTask: Task = {
-        name: data.name,
+      const newTask: Partial<Task> = {
+        title: data.title,
         description: data.description,
-        man_day_cost: data.man_day_cost,
-        roles: rolesArray,
-        subtasks: [],
-        createdAt: timestamp,
-        updatedAt: timestamp
+        mandays: data.mandays,
+        owner: selectedUser ? {
+          id: selectedUser.id,
+          firstName: selectedUser.firstName,
+          lastName: selectedUser.lastName,
+          role: selectedUser.role
+        } : undefined
       };
       
       onTaskCreated(newTask);
       
       toast({
         title: "Task Created",
-        description: `Task "${data.name}" has been created successfully.`,
+        description: `Task "${data.title}" has been created successfully.`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating task:", error);
       toast({
         title: "Error",
-        description: "Failed to create task. Please try again.",
+        description: `Failed to create task: ${error.message}`,
         variant: "destructive",
       });
     }
+  }
+
+  if (loading) {
+    return <p>Loading users...</p>;
+  }
+
+  if (error) {
+    return <p>Error loading users: {error.message}</p>;
   }
 
   return (
@@ -106,7 +116,7 @@ const TaskForm = ({ onTaskCreated, onCancel }: TaskFormProps) => {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
-          name="name"
+          name="title"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Task Name</FormLabel>
@@ -138,10 +148,10 @@ const TaskForm = ({ onTaskCreated, onCancel }: TaskFormProps) => {
         
         <FormField
           control={form.control}
-          name="man_day_cost"
+          name="mandays"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Man Day Cost</FormLabel>
+              <FormLabel>Man Days</FormLabel>
               <FormControl>
                 <Input type="number" min="1" {...field} />
               </FormControl>
@@ -152,23 +162,23 @@ const TaskForm = ({ onTaskCreated, onCancel }: TaskFormProps) => {
         
         <FormField
           control={form.control}
-          name="roles"
+          name="ownerId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Assign Role</FormLabel>
+              <FormLabel>Assign Owner</FormLabel>
               <Select 
                 onValueChange={field.onChange} 
                 defaultValue={field.value}
               >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a Domain Accountable" />
+                    <SelectValue placeholder="Select a Task Owner" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {accountableUsers.map((user) => (
-                    <SelectItem key={user.id} value={user.name}>
-                      {user.name}
+                  {users.map((user: any) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.firstName} {user.lastName} ({user.role})
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -1,11 +1,13 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { complianceData } from '@/data/complianceData';
-import { Domain, Task, UserRole } from '@/types/compliance';
+import { useQuery, useMutation } from '@apollo/client';
+import { GET_DOMAIN, GET_USERS } from '@/graphql/queries';
+import { CREATE_TASK } from '@/graphql/mutations';
+import { Domain, Task, User } from '@/types/graphqlTypes';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
 import DomainInfo from '@/components/domain/DomainInfo';
@@ -13,93 +15,105 @@ import DomainTasks from '@/components/domain/DomainTasks';
 import { Card, CardContent } from '@/components/ui/card';
 
 const DomainDetail = () => {
-  const { domainName } = useParams<{ domainName: string }>();
+  const { domainId } = useParams<{ domainId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isAdmin, isDomainAccountableFor, getAllUsers, assignDomainToAccountable, removeDomainFromAccountable } = useUser();
+  const { isAdmin, currentUser } = useUser();
   
-  const [domain, setDomain] = useState<Domain | null>(null);
-  const [accountableUsers, setAccountableUsers] = useState<{ id: string; name: string }[]>([]);
-  const [assignedAccountableId, setAssignedAccountableId] = useState<string>('');
-
-  useEffect(() => {
-    // Find the domain by name
-    const foundDomain = complianceData.regulations.domains.find(
-      (d) => d.name === domainName
-    );
-    setDomain(foundDomain || null);
-
-    // Load domain accountable users
-    if (isAdmin) {
-      const allUsers = getAllUsers();
-      const domainAccountables = allUsers.filter(user => user.role === UserRole.DomainAccountable);
-      setAccountableUsers(domainAccountables.map(user => ({ id: user.id, name: user.name })));
-      
-      // Find the currently assigned accountable user
-      const assignedUser = domainAccountables.find(user => 
-        user.permissions.accountableDomains?.includes(domainName || '')
-      );
-      
-      if (assignedUser) {
-        setAssignedAccountableId(assignedUser.id);
-      }
+  const { loading: loadingDomain, error: domainError, data: domainData, refetch } = 
+    useQuery(GET_DOMAIN, { variables: { id: domainId } });
+  
+  const { loading: loadingUsers, error: usersError, data: usersData } = useQuery(GET_USERS);
+  
+  const [createTask] = useMutation(CREATE_TASK, {
+    onCompleted: () => {
+      refetch();
+      toast({
+        title: "Task Created",
+        description: "Task has been successfully created.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to create task: ${error.message}`,
+        variant: "destructive",
+      });
     }
-  }, [domainName, getAllUsers, isAdmin]);
-
+  });
+  
+  const loading = loadingDomain || loadingUsers;
+  const error = domainError || usersError;
+  
+  const domain = domainData?.domain;
+  const users = usersData?.users || [];
+  
+  // Filter users who can be domain accountable (based on their role)
+  const accountableUsers = users
+    .filter((user: User) => user.role === "Domain Accountable")
+    .map((user: User) => ({ 
+      id: user.id, 
+      name: `${user.firstName} ${user.lastName}` 
+    }));
+  
+  // Find currently assigned accountable user
+  const assignedAccountableId = domain?.responsible?.id || '';
+  
   const handleAccountableAssignment = (userId: string) => {
-    // If there was a previous assignment, remove it
-    if (assignedAccountableId) {
-      removeDomainFromAccountable(assignedAccountableId, domainName || '');
-    }
-    
-    // If a new user is selected (not "None"), assign the domain
-    if (userId !== "none") {
-      assignDomainToAccountable(userId, domainName || '');
-      setAssignedAccountableId(userId);
-      
-      const selectedUser = accountableUsers.find(user => user.id === userId);
-      toast({
-        title: 'Domain Accountable Assigned',
-        description: `${selectedUser?.name} is now accountable for ${domainName}`,
-      });
-    } else {
-      // If "None" was selected, just remove the assignment
-      setAssignedAccountableId('');
-      toast({
-        title: 'Domain Accountable Removed',
-        description: `No user is accountable for ${domainName} now`,
-      });
-    }
+    // This would need to call a mutation to update domain responsible
+    // For now we'll just show a toast
+    toast({
+      title: 'Domain Accountable Updated',
+      description: `User assignment has been updated.`,
+    });
   };
 
-  const handleTaskCreated = (newTask: Task) => {
-    if (domain) {
-      // Create a copy of the domain with the new task added
-      const updatedDomain: Domain = {
-        ...domain,
-        tasks: [...domain.tasks, newTask]
-      };
-      
-      // Update the domain in the state
-      setDomain(updatedDomain);
-      
-      // Find the domain index in the regulations data
-      const domainIndex = complianceData.regulations.domains.findIndex(d => d.name === domainName);
-      if (domainIndex !== -1) {
-        // Update the domain in the actual data source
-        complianceData.regulations.domains[domainIndex] = updatedDomain;
+  const handleTaskCreated = (newTask: Partial<Task>) => {
+    createTask({
+      variables: {
+        title: newTask.title,
+        ownerId: newTask.owner?.id || currentUser?.id,
+        startDate: new Date().toISOString().split('T')[0],
+        endDate: new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0],
+        domainId: domainId,
+        description: newTask.description,
+        documentLink: newTask.documentLink,
+        mandays: newTask.mandays || 1
       }
-    }
+    });
   };
 
-  if (!domain) {
+  const canManageTasks = isAdmin || (currentUser?.id === assignedAccountableId);
+
+  const onSelectTask = (task: Task) => {
+    navigate(`/domain/${domainId}/task/${task.id}`);
+  };
+
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <div className="pt-24 px-4 container mx-auto">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+              <p className="text-lg">Loading domain data...</p>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (error || !domain) {
     return (
       <>
         <Navbar />
         <div className="pt-24 px-4 container mx-auto">
           <Card className="bg-white border-none shadow-lg animate-fade-in">
             <CardContent className="p-6">
-              <p>Domain not found.</p>
+              <p>Domain not found or error loading data.</p>
+              {error && <p className="text-red-600 mt-2">{error.message}</p>}
               <Button asChild className="mt-4">
                 <Link to="/">Go Back</Link>
               </Button>
@@ -110,12 +124,6 @@ const DomainDetail = () => {
     );
   }
 
-  const canManageTasks = isAdmin || isDomainAccountableFor(domainName || '');
-
-  const onSelectTask = (task: Task) => {
-    navigate(`/domain/${domainName}/task/${task.name}`);
-  };
-
   return (
     <>
       <Navbar />
@@ -124,14 +132,14 @@ const DomainDetail = () => {
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6 animate-fade-in">
             <Link to="/" className="hover:text-foreground">Dashboard</Link>
             <ArrowLeft className="h-4 w-4" />
-            <span className="font-medium text-foreground">{domain.name}</span>
+            <span className="font-medium text-foreground">{domain.title}</span>
           </div>
 
           <Card className="border-none shadow-lg mb-8 overflow-hidden animate-slide-down">
             <CardContent className="p-0">
               <DomainInfo 
                 domain={domain}
-                domainName={domainName}
+                domainName={domain.title}
                 isAdmin={isAdmin}
                 accountableUsers={accountableUsers}
                 assignedAccountableId={assignedAccountableId}

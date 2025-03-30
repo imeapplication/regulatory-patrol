@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Domain, Task } from '@/types/compliance';
+import { Domain, Task } from '@/types/graphqlTypes';
 import { Button } from '@/components/ui/button';
 import { Plus, ListChecks } from 'lucide-react';
 import {
@@ -16,7 +16,7 @@ import TaskList from '@/components/TaskList';
 interface DomainTasksProps {
   domain: Domain;
   canManageTasks: boolean;
-  onTaskCreated: (newTask: Task) => void;
+  onTaskCreated: (newTask: Partial<Task>) => void;
   onSelectTask: (task: Task) => void;
 }
 
@@ -27,6 +27,7 @@ const DomainTasks = ({
   onSelectTask,
 }: DomainTasksProps) => {
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
+  const tasks = domain.tasks || [];
 
   return (
     <div className="p-6 bg-white rounded-lg">
@@ -60,11 +61,11 @@ const DomainTasks = ({
       </div>
       
       <TaskList 
-        tasks={domain.tasks} 
+        tasks={tasks} 
         onSelectTask={onSelectTask}
       />
       
-      {domain.tasks.length === 0 && (
+      {tasks.length === 0 && (
         <div className="text-center py-10 text-gray-500 animate-fade-in">
           <ListChecks className="h-12 w-12 mx-auto text-gray-300 mb-3" />
           <p className="text-lg font-medium mb-2">No tasks yet</p>
