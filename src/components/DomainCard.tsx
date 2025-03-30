@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Domain } from '@/types/compliance';
+import { Domain } from '@/types/graphqlTypes';
 import GlassCard from './ui-components/GlassCard';
 import Badge from './ui-components/Badge';
 import AnimatedCounter from './ui-components/AnimatedCounter';
@@ -12,6 +12,9 @@ interface DomainCardProps {
 }
 
 const DomainCard = ({ domain, onClick }: DomainCardProps) => {
+  // Safely get the number of tasks
+  const tasksCount = domain.tasks ? domain.tasks.length : 0;
+  
   return (
     <GlassCard 
       className="h-full flex flex-col justify-between cursor-pointer transition-all transform hover:scale-[1.02]" 
@@ -19,17 +22,17 @@ const DomainCard = ({ domain, onClick }: DomainCardProps) => {
     >
       <div>
         <Badge variant="primary" className="mb-3">
-          {domain.tasks.length} {domain.tasks.length === 1 ? 'Task' : 'Tasks'}
+          {tasksCount} {tasksCount === 1 ? 'Task' : 'Tasks'}
         </Badge>
-        <h3 className="text-xl font-semibold mb-2">{domain.name}</h3>
-        <p className="text-muted-foreground text-sm line-clamp-3">{domain.description}</p>
+        <h3 className="text-xl font-semibold mb-2">{domain.title}</h3>
+        <p className="text-muted-foreground text-sm line-clamp-3">{domain.description || 'No description available'}</p>
       </div>
       
       <div className="mt-6 flex items-center justify-between">
         <div className="flex items-center space-x-1.5">
           <span className="text-muted-foreground text-sm">Effort:</span>
           <AnimatedCounter 
-            end={domain.man_day_cost} 
+            end={domain.mandays} 
             className="font-medium" 
             suffix=" man-days"
           />
