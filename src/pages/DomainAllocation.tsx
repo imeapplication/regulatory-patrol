@@ -217,7 +217,7 @@ const DomainAllocation = () => {
                             <SelectValue placeholder="Assign user" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">None</SelectItem>
+                            <SelectItem value="none">None</SelectItem>
                             {accountableUsers.map((user) => (
                               <SelectItem key={user.id} value={user.id}>
                                 {user.name}
@@ -275,7 +275,7 @@ const DomainAllocation = () => {
                             <SelectValue placeholder="Assign user" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">None</SelectItem>
+                            <SelectItem value="none">None</SelectItem>
                             {managerUsers.map((user) => (
                               <SelectItem key={user.id} value={user.id}>
                                 {user.name}
