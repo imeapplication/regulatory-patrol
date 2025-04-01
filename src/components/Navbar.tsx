@@ -1,128 +1,146 @@
 
 import React from 'react';
-import { cn } from '@/lib/utils';
-import { ArrowLeft, LogOut, User, Users, Clock, ShieldCheck } from 'lucide-react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useUser } from '@/contexts/UserContext';
-import { 
+import { Button } from '@/components/ui/button';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Menu, UserCog, ScrollText, UserCheck, ClipboardList } from 'lucide-react';
 
-interface NavbarProps {
-  className?: string;
-}
-
-const Navbar = ({ className }: NavbarProps) => {
-  const navigate = useNavigate();
-  const location = useLocation();
+const Navbar = () => {
   const { currentUser, logout, isAdmin } = useUser();
-  const { toast } = useToast();
-  const showBackButton = location.pathname !== '/';
+  const location = useLocation();
   
-  const handleLogout = () => {
-    logout();
-    toast({
-      title: 'Logged out',
-      description: 'You have been logged out successfully'
-    });
-    navigate('/login');
+  const isActive = (path: string) => {
+    return location.pathname === path;
+  };
+  
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(part => part[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
   };
   
   return (
-    <header className={cn("fixed top-0 left-0 right-0 z-40 border-b border-gray-200 bg-white/80 backdrop-blur-md", className)}>
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          {showBackButton && (
-            <button 
-              onClick={() => navigate(-1)}
-              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-              aria-label="Go back"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-          )}
-          <h1 className="text-xl font-medium">Regulatory Patrol</h1>
-        </div>
-        
-        <div className="flex items-center">
-          <nav className="hidden md:flex items-center space-x-1 mr-4">
-            <NavLink to="/" exact>Dashboard</NavLink>
-            <NavLink to="/json-view">JSON View</NavLink>
-            <NavLink to="/user-timeline">User Timeline</NavLink>
-            <NavLink to="/roles">Roles</NavLink>
-            {isAdmin && <NavLink to="/users">Users</NavLink>}
-          </nav>
-          
-          {currentUser && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="ml-2">
-                  <User className="w-4 h-4 mr-2" />
-                  {currentUser.name}
-                  {isAdmin && <span className="ml-2 text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">Admin</span>}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>
-                  <div>{currentUser.name}</div>
-                  <div className="text-xs text-muted-foreground">{currentUser.email}</div>
-                  <div className="text-xs font-semibold mt-1">{currentUser.role}</div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/user-timeline')}>
-                  <Clock className="w-4 h-4 mr-2" />
-                  User Timeline
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/roles')}>
-                  <ShieldCheck className="w-4 h-4 mr-2" />
-                  User Roles
-                </DropdownMenuItem>
-                {isAdmin && (
-                  <DropdownMenuItem onClick={() => navigate('/users')}>
-                    <Users className="w-4 h-4 mr-2" />
-                    Manage Users
+    <header className="fixed top-0 left-0 right-0 z-10 bg-white border-b border-gray-200">
+      <div className="container mx-auto px-4">
+        <div className="flex justify-between items-center h-16">
+          <div className="flex items-center gap-6">
+            <Link to="/" className="text-xl font-bold text-blue-600">CLA</Link>
+            
+            <nav className="hidden md:flex gap-1">
+              <Button
+                variant={isActive('/') ? "secondary" : "ghost"}
+                asChild
+                size="sm"
+              >
+                <Link to="/">Dashboard</Link>
+              </Button>
+              
+              <Button
+                variant={isActive('/json-view') ? "secondary" : "ghost"}
+                asChild
+                size="sm"
+              >
+                <Link to="/json-view">JSON View</Link>
+              </Button>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    <span>Administration</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56">
+                  <DropdownMenuLabel>Admin Tools</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  
+                  <DropdownMenuItem asChild>
+                    <Link to="/users">
+                      <UserCog className="mr-2 h-4 w-4" />
+                      <span>User Management</span>
+                    </Link>
                   </DropdownMenuItem>
-                )}
-                <DropdownMenuItem onClick={handleLogout}>
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Logout
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+                  
+                  <DropdownMenuItem asChild>
+                    <Link to="/roles">
+                      <UserCheck className="mr-2 h-4 w-4" />
+                      <span>User Roles</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem asChild>
+                    <Link to="/business-roles">
+                      <ClipboardList className="mr-2 h-4 w-4" />
+                      <span>Business Roles</span>
+                    </Link>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem asChild>
+                    <Link to="/domain-allocation">
+                      <ScrollText className="mr-2 h-4 w-4" />
+                      <span>Domain Allocation</span>
+                    </Link>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem asChild>
+                    <Link to="/user-timeline">
+                      <Menu className="mr-2 h-4 w-4" />
+                      <span>Timeline</span>
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </nav>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            {currentUser ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="rounded-full h-8 w-8 p-0">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-blue-100 text-blue-800">
+                        {getInitials(currentUser.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col">
+                      <span>{currentUser.name}</span>
+                      <span className="text-xs text-gray-500">{currentUser.email}</span>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={logout}
+                    className="text-red-600 cursor-pointer"
+                  >
+                    Log out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button asChild size="sm">
+                <Link to="/login">Log in</Link>
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </header>
-  );
-};
-
-interface NavLinkProps {
-  children: React.ReactNode;
-  to: string;
-  exact?: boolean;
-}
-
-const NavLink = ({ children, to, exact = false }: NavLinkProps) => {
-  const location = useLocation();
-  const isActive = exact ? location.pathname === to : location.pathname.startsWith(to);
-  
-  return (
-    <Link 
-      to={to} 
-      className={cn(
-        "px-4 py-2 rounded-md text-sm font-medium transition-colors",
-        isActive ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
-      )}
-    >
-      {children}
-    </Link>
   );
 };
 

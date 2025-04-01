@@ -49,8 +49,18 @@ export enum UserRole {
   Administrator = "Administrator",
   DomainAccountable = "Domain Accountable",
   DomainManager = "Domain Manager",
-  TaskManager = "Task Manager",  // Added new role
+  TaskManager = "Task Manager",
   Regular = "Regular"
+}
+
+// Business role types
+export enum BusinessRole {
+  DPO = "DPO",
+  EnvironmentalOfficer = "Environmental Officer",
+  ComplianceOfficer = "Compliance Officer",
+  CFO = "CFO",
+  QualityDirector = "Quality Director",
+  None = "None"
 }
 
 export interface UserPermissions {
@@ -69,6 +79,7 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
+  businessRole?: BusinessRole;
   permissions: UserPermissions;
 }
 

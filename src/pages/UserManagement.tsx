@@ -38,15 +38,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { User, UserRole, getRolePermissions } from '@/types/compliance';
+import { User, UserRole, getRolePermissions, BusinessRole } from '@/types/compliance';
 import { useToast } from '@/hooks/use-toast';
-import { Edit, Plus, Trash, History, User as UserIcon } from 'lucide-react';
+import { Edit, Plus, Trash, History } from 'lucide-react';
 import UserAllocationHistory from '@/components/UserAllocationHistory';
+import { BusinessRoleEntry } from '@/hooks/useBusinessRoleManagement';
 
 const UserManagement = () => {
-  const { currentUser, getAllUsers, addUser, updateUser, deleteUser, isAdmin } = useUser();
+  const { currentUser, getAllUsers, addUser, updateUser, deleteUser, isAdmin, getAllBusinessRoles } = useUser();
   const { toast } = useToast();
   const [users, setUsers] = useState<User[]>(getAllUsers());
+  const [businessRolesList] = useState<BusinessRoleEntry[]>(getAllBusinessRoles());
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -56,6 +58,7 @@ const UserManagement = () => {
     name: '',
     email: '',
     role: UserRole.Regular,
+    businessRole: BusinessRole.None,
   });
 
   // Refresh user list
@@ -84,13 +87,14 @@ const UserManagement = () => {
       name: formData.name,
       email: formData.email,
       role: formData.role,
+      businessRole: formData.businessRole,
       permissions: getRolePermissions(formData.role),
     };
 
     addUser(newUser);
     refreshUserList(); // Refresh the user list immediately
     setIsAddDialogOpen(false);
-    setFormData({ name: '', email: '', role: UserRole.Regular });
+    setFormData({ name: '', email: '', role: UserRole.Regular, businessRole: BusinessRole.None });
     
     toast({
       title: 'User added',
@@ -106,6 +110,7 @@ const UserManagement = () => {
       name: formData.name,
       email: formData.email,
       role: formData.role,
+      businessRole: formData.businessRole,
       permissions: getRolePermissions(formData.role),
     };
 
@@ -140,6 +145,7 @@ const UserManagement = () => {
       name: user.name,
       email: user.email,
       role: user.role,
+      businessRole: user.businessRole || BusinessRole.None,
     });
     setIsEditDialogOpen(true);
   };
@@ -152,6 +158,32 @@ const UserManagement = () => {
   const openHistoryDrawer = (user: User) => {
     setSelectedUser(user);
     setIsHistoryDrawerOpen(true);
+  };
+
+  const getBusinessRoleDisplay = (businessRole?: BusinessRole) => {
+    if (!businessRole || businessRole === BusinessRole.None) {
+      return "—";
+    }
+    return businessRole;
+  };
+
+  const getBusinessRoleClass = (businessRole?: BusinessRole) => {
+    if (!businessRole || businessRole === BusinessRole.None) return "bg-gray-100 text-gray-800";
+    
+    switch (businessRole) {
+      case BusinessRole.DPO:
+        return "bg-purple-100 text-purple-800";
+      case BusinessRole.EnvironmentalOfficer:
+        return "bg-green-100 text-green-800";
+      case BusinessRole.ComplianceOfficer:
+        return "bg-blue-100 text-blue-800";
+      case BusinessRole.CFO:
+        return "bg-yellow-100 text-yellow-800";
+      case BusinessRole.QualityDirector:
+        return "bg-indigo-100 text-indigo-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
   };
 
   return (
@@ -173,6 +205,7 @@ const UserManagement = () => {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Business Role</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -192,6 +225,11 @@ const UserManagement = () => {
                         : 'bg-gray-100 text-gray-800'
                     }`}>
                       {user.role}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span className={`inline-block px-2 py-1 rounded-full text-xs ${getBusinessRoleClass(user.businessRole)}`}>
+                      {getBusinessRoleDisplay(user.businessRole)}
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
@@ -282,6 +320,24 @@ const UserManagement = () => {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="businessRole">Business Role</Label>
+              <Select
+                value={formData.businessRole}
+                onValueChange={(value) => setFormData({ ...formData, businessRole: value as BusinessRole })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a business role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(BusinessRole).map((role) => (
+                    <SelectItem key={role} value={role}>
+                      {role === BusinessRole.None ? "None" : role}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
@@ -332,6 +388,24 @@ const UserManagement = () => {
                   {Object.values(UserRole).map((role) => (
                     <SelectItem key={role} value={role}>
                       {role}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-businessRole">Business Role</Label>
+              <Select
+                value={formData.businessRole}
+                onValueChange={(value) => setFormData({ ...formData, businessRole: value as BusinessRole })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a business role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(BusinessRole).map((role) => (
+                    <SelectItem key={role} value={role}>
+                      {role === BusinessRole.None ? "None" : role}
                     </SelectItem>
                   ))}
                 </SelectContent>

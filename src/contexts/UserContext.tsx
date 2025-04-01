@@ -1,12 +1,13 @@
 
 import React, { createContext, useContext } from 'react';
-import { User } from '@/types/compliance';
+import { User, BusinessRole } from '@/types/compliance';
 import { AllocationHistoryEntry } from '@/types/userAllocation';
 import { useUserManagement } from '@/hooks/useUserManagement';
 import { useAllocationHistory } from '@/hooks/useAllocationHistory';
 import { useDomainManagement } from '@/hooks/useDomainManagement';
 import { useTaskManagement } from '@/hooks/useTaskManagement';
 import { usePermissionChecks } from '@/hooks/usePermissionChecks';
+import { useBusinessRoleManagement, BusinessRoleEntry } from '@/hooks/useBusinessRoleManagement';
 
 interface UserContextType {
   currentUser: User | null;
@@ -30,6 +31,12 @@ interface UserContextType {
   getAllocationHistory: () => AllocationHistoryEntry[];
   getUserAllocationHistory: (userId: string) => AllocationHistoryEntry[];
   getTaskManagerUsers: () => User[];
+  // Business role management
+  businessRoles: BusinessRoleEntry[];
+  getAllBusinessRoles: () => BusinessRoleEntry[];
+  addBusinessRole: (role: BusinessRoleEntry) => void;
+  updateBusinessRole: (role: BusinessRoleEntry) => void;
+  deleteBusinessRole: (roleId: string) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -84,6 +91,14 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     currentUser
   });
 
+  const {
+    businessRoles,
+    getAllBusinessRoles,
+    addBusinessRole,
+    updateBusinessRole,
+    deleteBusinessRole
+  } = useBusinessRoleManagement();
+
   return (
     <UserContext.Provider value={{ 
       currentUser, 
@@ -106,7 +121,13 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       isTaskManagerFor,
       getAllocationHistory,
       getUserAllocationHistory,
-      getTaskManagerUsers
+      getTaskManagerUsers,
+      // Business role management
+      businessRoles,
+      getAllBusinessRoles,
+      addBusinessRole,
+      updateBusinessRole,
+      deleteBusinessRole
     }}>
       {children}
     </UserContext.Provider>

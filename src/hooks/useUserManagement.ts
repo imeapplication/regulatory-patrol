@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { User, UserRole, getRolePermissions } from '@/types/compliance';
+import { User, UserRole, BusinessRole, getRolePermissions } from '@/types/compliance';
 
 // Sample user data
 const DEFAULT_USERS = [
@@ -9,6 +8,7 @@ const DEFAULT_USERS = [
     name: "CLA",
     email: "cla@example.com",
     role: UserRole.Administrator,
+    businessRole: BusinessRole.ComplianceOfficer,
     permissions: getRolePermissions(UserRole.Administrator)
   },
   {
@@ -16,6 +16,7 @@ const DEFAULT_USERS = [
     name: "Domain Manager",
     email: "manager@example.com",
     role: UserRole.DomainManager,
+    businessRole: BusinessRole.EnvironmentalOfficer,
     permissions: getRolePermissions(UserRole.DomainManager)
   },
   {
@@ -23,6 +24,7 @@ const DEFAULT_USERS = [
     name: "Domain Accountable",
     email: "accountable@example.com",
     role: UserRole.DomainAccountable,
+    businessRole: BusinessRole.DPO,
     permissions: {
       ...getRolePermissions(UserRole.DomainAccountable),
       accountableDomains: []
@@ -33,6 +35,7 @@ const DEFAULT_USERS = [
     name: "Task Manager",
     email: "taskmanager@example.com",
     role: UserRole.TaskManager,
+    businessRole: BusinessRole.None,
     permissions: {
       ...getRolePermissions(UserRole.TaskManager),
       manageableTasks: []

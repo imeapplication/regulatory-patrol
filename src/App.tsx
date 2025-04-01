@@ -17,6 +17,7 @@ import UserManagement from "./pages/UserManagement";
 import UserRoles from "./pages/UserRoles";
 import DomainAllocation from "./pages/DomainAllocation";
 import UserTimeline from "./pages/UserTimeline";
+import BusinessRoles from "./pages/BusinessRoles";
 
 const queryClient = new QueryClient();
 
@@ -74,6 +75,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <UserRoles />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/business-roles" 
+              element={
+                <ProtectedRoute requireAdmin={true}>
+                  <BusinessRoles />
                 </ProtectedRoute>
               } 
             />

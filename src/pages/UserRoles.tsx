@@ -5,6 +5,8 @@ import Navbar from '@/components/Navbar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Check, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 
 const UserRoles = () => {
   // Get all available roles from the UserRole enum
@@ -14,7 +16,12 @@ const UserRoles = () => {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       <div className="container mx-auto px-4 pt-24 pb-12">
-        <h1 className="text-3xl font-bold mb-6">User Roles & Permissions</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">User Roles & Permissions</h1>
+          <Button asChild>
+            <Link to="/business-roles">Manage Business Roles</Link>
+          </Button>
+        </div>
         <p className="mb-8 text-muted-foreground">
           This page displays all available user roles in the system and their associated permissions.
         </p>
@@ -23,7 +30,7 @@ const UserRoles = () => {
           {/* Roles Overview */}
           <Card>
             <CardHeader>
-              <CardTitle>Roles Overview</CardTitle>
+              <CardTitle>System Roles Overview</CardTitle>
               <CardDescription>Basic information about each role in the system</CardDescription>
             </CardHeader>
             <CardContent>
