@@ -34,8 +34,30 @@ const DomainContent = ({ domain, setDomain, onSelectTask }: DomainContentProps) 
       setAssignedAccountableId(domain.responsible.id);
     } else {
       setAssignedAccountableId('');
+      
+      // Check if this domain is assigned to any accountable in user data
+      const users = getAllUsers();
+      const accountableWithDomain = users.find(user => 
+        user.permissions.accountableDomains?.includes(domain.title)
+      );
+      
+      if (accountableWithDomain) {
+        // If found in user permissions but not in domain object, update the domain
+        const updatedDomain = {
+          ...domain,
+          responsible: {
+            id: accountableWithDomain.id,
+            firstName: accountableWithDomain.name.split(' ')[0] || '',
+            lastName: accountableWithDomain.name.split(' ')[1] || '',
+            role: accountableWithDomain.businessRole || accountableWithDomain.role
+          }
+        };
+        
+        setDomain(updatedDomain);
+        setAssignedAccountableId(accountableWithDomain.id);
+      }
     }
-  }, [domain]);
+  }, [domain, getAllUsers, setDomain]);
 
   const handleAccountableAssignment = (userId: string) => {
     // Remove previous accountable if exists
