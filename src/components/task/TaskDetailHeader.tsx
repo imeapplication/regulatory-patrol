@@ -23,7 +23,8 @@ const TaskDetailHeader = ({ task }: TaskDetailHeaderProps) => {
     }
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return 'Invalid date';
     try {
       return format(new Date(dateString), 'MMM d, yyyy');
     } catch (e) {

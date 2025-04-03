@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { complianceData } from '@/data/complianceData';
 import { Domain as ComplianceDomain } from '@/types/compliance';
@@ -28,6 +27,8 @@ export interface TaskForUI {
   owner?: User;
   subtasks?: TaskForUI[];
   actions?: any[];
+  lastUpdated?: string; // Added missing property
+  ownerSince?: string; // Added missing property
 }
 
 export const useDomainDetail = (domainId: string | undefined) => {

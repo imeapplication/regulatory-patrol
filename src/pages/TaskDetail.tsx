@@ -100,7 +100,8 @@ const TaskDetail = () => {
       task
     );
 
-    const updatedTask = {
+    // Create updated task with new owner and timestamp information
+    const updatedTask: TaskForUI = {
       ...task,
       owner: {
         id: selectedUser.id,
