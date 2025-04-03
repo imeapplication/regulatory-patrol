@@ -32,7 +32,7 @@ const AllocationTable = ({ allocations, selectedDate }: AllocationTableProps) =>
             <TableRow>
               <TableHead>User</TableHead>
               <TableHead>Role</TableHead>
-              <TableHead>Assigned Domains</TableHead>
+              <TableHead>Assignments</TableHead>
               <TableHead className="text-right">Total Man-Days</TableHead>
             </TableRow>
           </TableHeader>
@@ -42,8 +42,9 @@ const AllocationTable = ({ allocations, selectedDate }: AllocationTableProps) =>
                 <TableCell className="font-medium">{allocation.user.name}</TableCell>
                 <TableCell>{allocation.user.role}</TableCell>
                 <TableCell>
-                  {allocation.domains.length > 0 ? (
-                    <div className="flex flex-wrap gap-1">
+                  {/* Show domains */}
+                  {allocation.domains.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-1">
                       {allocation.domains.map(domain => (
                         <span 
                           key={domain} 
@@ -53,8 +54,24 @@ const AllocationTable = ({ allocations, selectedDate }: AllocationTableProps) =>
                         </span>
                       ))}
                     </div>
-                  ) : (
-                    <span className="text-muted-foreground text-sm">No domains assigned</span>
+                  )}
+                  
+                  {/* Show tasks */}
+                  {allocation.tasks.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {allocation.tasks.map((task, idx) => (
+                        <span 
+                          key={`${task.domain}-${task.task}-${idx}`} 
+                          className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800"
+                        >
+                          {task.task}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {allocation.domains.length === 0 && allocation.tasks.length === 0 && (
+                    <span className="text-muted-foreground text-sm">No assignments</span>
                   )}
                 </TableCell>
                 <TableCell className="text-right">

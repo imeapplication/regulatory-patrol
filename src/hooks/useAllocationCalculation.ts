@@ -20,21 +20,6 @@ export const useAllocationCalculation = (
   const [allocations, setAllocations] = useState<AllocationEntry[]>([]);
   const [recentEvents, setRecentEvents] = useState<any[]>([]);
 
-  // Update date when timeValue changes
-  useEffect(() => {
-    // For demo purposes, let's say 0 = 3 months ago, 100 = today
-    const today = new Date();
-    const threeMonthsAgo = subMonths(today, 3);
-    
-    // Calculate the date based on the slider position
-    const millisecondDiff = today.getTime() - threeMonthsAgo.getTime();
-    const newDate = new Date(threeMonthsAgo.getTime() + (millisecondDiff * timeValue / 100));
-    
-    // This would normally update selectedDate, but we're now passing it back
-    // as a return value instead of updating state here
-    return newDate;
-  }, [timeValue]);
-
   // Calculate user allocations and recent events
   useEffect(() => {
     // Calculate allocations
@@ -68,6 +53,7 @@ export const useAllocationCalculation = (
       // Calculate domains based on allocation history up to the selected date
       const accountableDomains = new Set<string>();
       const manageableDomains = new Set<string>();
+      const manageableTasks = new Set<{domain: string, task: string}>();
       
       userHistory.forEach(entry => {
         const eventDate = parseISO(entry.timestamp);
@@ -85,6 +71,17 @@ export const useAllocationCalculation = (
               manageableDomains.add(entry.domainName);
             } else if (entry.action === 'removed') {
               manageableDomains.delete(entry.domainName);
+            }
+          } else if (entry.role === 'TaskManager') {
+            if (entry.action === 'assigned' && entry.taskName) {
+              manageableTasks.add({domain: entry.domainName || '', task: entry.taskName});
+            } else if (entry.action === 'removed' && entry.taskName) {
+              // Remove task by filtering
+              manageableTasks.forEach(item => {
+                if (item.task === entry.taskName) {
+                  manageableTasks.delete(item);
+                }
+              });
             }
           }
         }
@@ -114,12 +111,27 @@ export const useAllocationCalculation = (
           }
         });
       }
+
+      if (user.role === UserRole.TaskManager) {
+        userAllocation.tasks = [...manageableTasks];
+        
+        // Calculate man days for tasks
+        manageableTasks.forEach(taskEntry => {
+          const domain = complianceData.regulations.domains.find(d => d.name === taskEntry.domain);
+          if (domain) {
+            const task = domain.tasks.find(t => t.name === taskEntry.task);
+            if (task) {
+              userAllocation.totalManDays += task.man_day_cost;
+            }
+          }
+        });
+      }
       
-      // Only add users who have domains assigned
-      if (userAllocation.domains.length > 0) {
+      // Only add users who have domains or tasks assigned
+      if (userAllocation.domains.length > 0 || userAllocation.tasks.length > 0) {
         allocations.push(userAllocation);
-      } else if (user.role === UserRole.DomainAccountable || user.role === UserRole.DomainManager) {
-        // Include domain managers and accountables even if they have no domains
+      } else if (user.role === UserRole.DomainAccountable || user.role === UserRole.DomainManager || user.role === UserRole.TaskManager) {
+        // Include domain managers, accountables, and task managers even if they have no assignments
         allocations.push(userAllocation);
       }
     });

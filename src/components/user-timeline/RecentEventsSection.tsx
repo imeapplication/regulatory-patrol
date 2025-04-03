@@ -25,15 +25,28 @@ const RecentEventsSection = ({ recentEvents, users }: RecentEventsSectionProps) 
         <div className="space-y-3">
           {recentEvents.map((event, index) => {
             const user = users.find(u => u.id === event.userId);
+            const roleText = {
+              'DomainAccountable': 'Domain Accountable',
+              'DomainManager': 'Domain Manager',
+              'TaskManager': 'Task Manager'
+            }[event.role] || event.role;
+
             return (
               <div key={index} className="flex justify-between items-center border-b border-gray-100 pb-3 last:border-0 last:pb-0">
                 <div>
                   <span className="font-medium">{user?.name}</span>
                   <span className="text-sm text-muted-foreground ml-1">
-                    was {event.action === 'assigned' ? 'assigned to' : 'removed from'} {event.domainName}
+                    was {event.action === 'assigned' ? 'assigned to' : 'removed from'}{' '}
+                    {event.taskName ? (
+                      <>
+                        task <span className="font-medium">{event.taskName}</span> in domain {event.domainName}
+                      </>
+                    ) : (
+                      <>domain <span className="font-medium">{event.domainName}</span></>
+                    )}
                   </span>
                   <div className="text-xs text-muted-foreground mt-1">
-                    Role: {event.role}
+                    Role: {roleText}
                   </div>
                 </div>
                 <div className="text-xs text-muted-foreground">

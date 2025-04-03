@@ -28,7 +28,7 @@ const UserTimeline = () => {
     setSelectedDate(newDate);
   }, [timeValue]);
   
-  // Use the new hook to calculate allocations and get recent events
+  // Use the allocation calculation hook
   const { allocations, recentEvents } = useAllocationCalculation(
     users, 
     allocationHistory,
