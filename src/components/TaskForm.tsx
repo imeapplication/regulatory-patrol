@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -25,6 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
 import { UserRole } from '@/types/compliance';
 import { useAllocationHistory } from '@/hooks/useAllocationHistory';
+import { useTaskManagement } from '@/hooks/useTaskManagement';
 
 const taskSchema = z.object({
   title: z.string().min(2, {
@@ -51,8 +53,15 @@ interface TaskFormProps {
 
 const TaskForm = ({ onTaskCreated, onCancel, domainName }: TaskFormProps) => {
   const { toast } = useToast();
-  const { currentUser, getAllUsers } = useUser();
+  const { currentUser, getAllUsers, updateUser } = useUser();
   const { addAllocationHistoryEntry } = useAllocationHistory();
+  
+  // Initialize task management hooks
+  const { assignTaskToManager } = useTaskManagement({
+    users: getAllUsers(),
+    updateUser,
+    addAllocationHistoryEntry
+  });
   
   const allUsers = getAllUsers();
   
@@ -86,22 +95,16 @@ const TaskForm = ({ onTaskCreated, onCancel, domainName }: TaskFormProps) => {
         mandays: data.mandays,
         owner: selectedUser ? {
           id: selectedUser.id,
-          firstName: selectedUser.name,
-          lastName: '',
+          firstName: selectedUser.name.split(' ')[0] || selectedUser.name,
+          lastName: selectedUser.name.split(' ')[1] || '',
           role: selectedUser.businessRole || selectedUser.role
         } : undefined
       };
       
-      // Track task allocation in history
+      // Update task manager permissions and allocation history
       if (selectedUser && domainName) {
-        addAllocationHistoryEntry({
-          userId: selectedUser.id,
-          domainName,
-          taskName: data.title,
-          action: 'assigned',
-          timestamp: new Date().toISOString(),
-          role: 'TaskManager'
-        });
+        // Add task to user's manageable tasks
+        assignTaskToManager(selectedUser.id, domainName, data.title);
       }
       
       onTaskCreated(newTask);

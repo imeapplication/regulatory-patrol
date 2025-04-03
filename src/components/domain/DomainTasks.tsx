@@ -52,8 +52,12 @@ const DomainTasks = ({
                 <DialogTitle>Add New Task</DialogTitle>
               </DialogHeader>
               <TaskForm 
-                onTaskCreated={onTaskCreated}
+                onTaskCreated={(task) => {
+                  onTaskCreated(task);
+                  setIsTaskDialogOpen(false);
+                }}
                 onCancel={() => setIsTaskDialogOpen(false)}
+                domainName={domain.title}
               />
             </DialogContent>
           </Dialog>

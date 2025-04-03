@@ -20,37 +20,76 @@ interface TaskOwnerSelectProps {
 }
 
 const TaskOwnerSelect = ({ task, domainTitle, onOwnerChange }: TaskOwnerSelectProps) => {
-  const { getAllUsers } = useUser();
+  const { getAllUsers, updateUser } = useUser();
   const { addAllocationHistoryEntry } = useAllocationHistory();
   const [currentOwnerId, setCurrentOwnerId] = useState<string | undefined>(task.owner?.id);
+  
+  // Initialize task management hooks
+  const { getTaskManagerUsers } = useTaskManagement({
+    users: getAllUsers(),
+    updateUser,
+    addAllocationHistoryEntry
+  });
   
   // Get all users and filter to only show Task Managers
   const users = getAllUsers();
   const taskManagers = users.filter(user => user.role === UserRole.TaskManager);
   
-  // Update the current owner ID whenever task.owner changes
+  // Check if the task is in user's permissions
   useEffect(() => {
-    setCurrentOwnerId(task.owner?.id);
-  }, [task.owner?.id]);
+    if (task.owner?.id) {
+      // Set current owner ID from task
+      setCurrentOwnerId(task.owner.id);
+      
+      // Also verify if this task is in the user's permissions
+      const ownerUser = users.find(user => user.id === task.owner?.id);
+      if (ownerUser && ownerUser.role === UserRole.TaskManager) {
+        // If the owner exists but doesn't have this task in permissions, sync it
+        const manageableTasks = ownerUser.permissions.manageableTasks || [];
+        if (!manageableTasks.includes(task.title)) {
+          // Add the task to the user's permissions
+          const updatedUser = {
+            ...ownerUser,
+            permissions: {
+              ...ownerUser.permissions,
+              manageableTasks: [...manageableTasks, task.title]
+            }
+          };
+          
+          updateUser(updatedUser);
+          
+          // Log allocation history
+          addAllocationHistoryEntry({
+            userId: ownerUser.id,
+            domainName: domainTitle,
+            taskName: task.title,
+            action: 'assigned',
+            timestamp: new Date().toISOString(),
+            role: 'TaskManager'
+          });
+        }
+      }
+    } else {
+      setCurrentOwnerId('');
+      
+      // Check if this task is assigned to any task manager in permissions
+      const taskManagers = users.filter(user => user.role === UserRole.TaskManager);
+      for (const manager of taskManagers) {
+        const manageableTasks = manager.permissions.manageableTasks || [];
+        if (manageableTasks.includes(task.title)) {
+          // Found a task manager with this task - update the task UI
+          onOwnerChange(manager.id);
+          break;
+        }
+      }
+    }
+  }, [task, users, domainTitle, updateUser, addAllocationHistoryEntry, onOwnerChange]);
 
   // Handle owner change with history tracking
   const handleSelectChange = (userId: string) => {
     if (userId === currentOwnerId) return;
     
     onOwnerChange(userId);
-    
-    // Add to allocation history
-    if (domainTitle) {
-      addAllocationHistoryEntry({
-        userId,
-        domainName: domainTitle,
-        taskName: task.title,
-        action: 'assigned',
-        timestamp: new Date().toISOString(),
-        role: 'TaskManager'
-      });
-    }
-    
     setCurrentOwnerId(userId);
   };
 

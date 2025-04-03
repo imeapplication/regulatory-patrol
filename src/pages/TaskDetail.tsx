@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DomainDetailLayout from '@/components/domain/DomainDetailLayout';
@@ -11,6 +12,8 @@ import { format } from 'date-fns';
 import { useUser } from '@/contexts/UserContext';
 import { UserRole } from '@/types/compliance';
 import TaskOwnerSelect from '@/components/TaskOwnerSelect';
+import { useAllocationHistory } from '@/hooks/useAllocationHistory';
+import { useTaskManagement } from '@/hooks/useTaskManagement';
 
 const TaskDetail = () => {
   const { domainId, taskId } = useParams<{ domainId: string; taskId: string }>();
@@ -18,6 +21,15 @@ const TaskDetail = () => {
   const { toast } = useToast();
   const { loading, domain, setDomain } = useDomainDetail(domainId);
   const [task, setTask] = useState<TaskForUI | null>(null);
+  const { getAllUsers, updateUser } = useUser();
+  const { addAllocationHistoryEntry } = useAllocationHistory();
+  
+  // Initialize task management hooks with proper context
+  const { updateTaskOwner } = useTaskManagement({
+    users: getAllUsers(),
+    updateUser,
+    addAllocationHistoryEntry
+  });
 
   useEffect(() => {
     if (domain && !loading && taskId) {
@@ -43,7 +55,6 @@ const TaskDetail = () => {
   const handleOwnerChange = (userId: string) => {
     if (!task || !domain) return;
     
-    const { getAllUsers } = useUser();
     const users = getAllUsers();
     const selectedUser = users.find(user => user.id === userId);
     
@@ -53,11 +64,19 @@ const TaskDetail = () => {
       ...task,
       owner: {
         id: selectedUser.id,
-        firstName: selectedUser.name,
-        lastName: '',
+        firstName: selectedUser.name.split(' ')[0] || selectedUser.name,
+        lastName: selectedUser.name.split(' ')[1] || '',
         role: selectedUser.businessRole || selectedUser.role
       }
     };
+
+    // Sync with the task management system to update user permissions
+    updateTaskOwner(
+      task.owner?.id, 
+      userId, 
+      domain.title, 
+      task
+    );
 
     if (domain.tasks) {
       const updatedTasks = domain.tasks.map(t => 
@@ -134,11 +153,11 @@ const TaskDetail = () => {
           <CardContent className="p-6">
             <div className="flex justify-between items-start">
               <div>
-                <h1 className="text-2xl font-bold mb-2">{task.title}</h1>
-                <p className="text-gray-600">{task.description}</p>
+                <h1 className="text-2xl font-bold mb-2">{task?.title}</h1>
+                <p className="text-gray-600">{task?.description}</p>
               </div>
               <div>
-                {getStatusBadge(task.status)}
+                {task && getStatusBadge(task.status)}
               </div>
             </div>
 
@@ -147,7 +166,7 @@ const TaskDetail = () => {
                 <Clock className="w-5 h-5 text-gray-500" />
                 <div>
                   <div className="text-sm text-gray-500">Effort</div>
-                  <div className="font-medium">{task.mandays} man-days</div>
+                  <div className="font-medium">{task?.mandays} man-days</div>
                 </div>
               </div>
 
@@ -156,7 +175,7 @@ const TaskDetail = () => {
                 <div>
                   <div className="text-sm text-gray-500">Timeline</div>
                   <div className="font-medium">
-                    {formatDate(task.startDate)} - {formatDate(task.endDate)}
+                    {task && formatDate(task.startDate)} - {task && formatDate(task.endDate)}
                   </div>
                 </div>
               </div>
@@ -165,7 +184,7 @@ const TaskDetail = () => {
                 <Users className="w-5 h-5 text-gray-500" />
                 <div>
                   <div className="text-sm text-gray-500">Owner</div>
-                  {domain && (
+                  {domain && task && (
                     <TaskOwnerSelect 
                       task={task} 
                       domainTitle={domain.title} 
@@ -194,8 +213,8 @@ const TaskDetail = () => {
                 <div>
                   <div className="font-medium">View related documents</div>
                 </div>
-                <Button variant="outline" size="sm" disabled={!task.documentLink}>
-                  {task.documentLink ? "Open Document" : "No Document"}
+                <Button variant="outline" size="sm" disabled={!task?.documentLink}>
+                  {task?.documentLink ? "Open Document" : "No Document"}
                 </Button>
               </div>
               <div className="p-3 border rounded-md flex items-center justify-between">
