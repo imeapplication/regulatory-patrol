@@ -61,11 +61,14 @@ const TaskForm = ({ onTaskCreated, onCancel, domainName }: TaskFormProps) => {
     user.role === UserRole.TaskManager
   );
   
+  // If no valid task owner is found, use empty string as default
+  const defaultOwnerId = validTaskOwners.length > 0 ? validTaskOwners[0].id : "";
+  
   const defaultValues: Partial<TaskFormValues> = {
     title: "",
     description: "",
     mandays: 1,
-    ownerId: currentUser?.id || "",
+    ownerId: defaultOwnerId,
   };
 
   const form = useForm<TaskFormValues>({

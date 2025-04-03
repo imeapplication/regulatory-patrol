@@ -1,11 +1,13 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
 import DomainInfo from '@/components/domain/DomainInfo';
 import DomainTasks from '@/components/domain/DomainTasks';
 import { DomainForUI, TaskForUI } from '@/hooks/useDomainDetail';
+import { useDomainManagement } from '@/hooks/useDomainManagement';
+import { useAllocationHistory } from '@/hooks/useAllocationHistory';
 
 interface DomainContentProps {
   domain: DomainForUI;
@@ -15,14 +17,66 @@ interface DomainContentProps {
 
 const DomainContent = ({ domain, setDomain, onSelectTask }: DomainContentProps) => {
   const { toast } = useToast();
-  const { isAdmin, currentUser, isDomainAccountableFor } = useUser();
+  const { isAdmin, currentUser, getAllUsers, updateUser } = useUser();
+  const { addAllocationHistoryEntry } = useAllocationHistory();
+  const [assignedAccountableId, setAssignedAccountableId] = useState<string>('');
   
-  const assignedAccountableId = domain?.responsible?.id || '';
+  // Initialize domain management hooks
+  const { assignDomainToAccountable, removeDomainFromAccountable } = useDomainManagement({
+    users: getAllUsers(),
+    updateUser,
+    addAllocationHistoryEntry
+  });
   
+  // Set initial assigned accountable ID when domain loads
+  useEffect(() => {
+    if (domain?.responsible?.id) {
+      setAssignedAccountableId(domain.responsible.id);
+    } else {
+      setAssignedAccountableId('');
+    }
+  }, [domain]);
+
   const handleAccountableAssignment = (userId: string) => {
+    // Remove previous accountable if exists
+    if (assignedAccountableId && domain.title) {
+      removeDomainFromAccountable(assignedAccountableId, domain.title);
+    }
+    
+    // Assign new accountable if not empty
+    if (userId && domain.title) {
+      assignDomainToAccountable(userId, domain.title);
+      
+      // Update domain responsible in UI
+      const users = getAllUsers();
+      const selectedUser = users.find(user => user.id === userId);
+      
+      if (selectedUser) {
+        const updatedDomain = {
+          ...domain,
+          responsible: {
+            id: selectedUser.id,
+            role: selectedUser.businessRole || selectedUser.role,
+          }
+        };
+        
+        setDomain(updatedDomain);
+        setAssignedAccountableId(userId);
+      }
+    } else {
+      // Remove accountable assignment
+      const updatedDomain = {
+        ...domain,
+        responsible: undefined
+      };
+      
+      setDomain(updatedDomain);
+      setAssignedAccountableId('');
+    }
+    
     toast({
       title: 'Domain Accountable Updated',
-      description: `User assignment has been updated.`,
+      description: userId ? `Domain accountable has been assigned.` : `Domain accountable has been removed.`,
     });
   };
 
@@ -43,12 +97,7 @@ const DomainContent = ({ domain, setDomain, onSelectTask }: DomainContentProps) 
         endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         mandays: newTask.mandays || 1,
         status: 0,
-        owner: newTask.owner || (currentUser ? {
-          id: currentUser.id,
-          firstName: currentUser.name || '',
-          lastName: '',
-          role: currentUser.role || ''
-        } : undefined)
+        owner: newTask.owner
       };
       
       updatedDomain.tasks = [...(updatedDomain.tasks || []), newTaskObj];

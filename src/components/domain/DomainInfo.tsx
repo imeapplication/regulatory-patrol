@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Domain } from '@/types/graphqlTypes';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
@@ -25,6 +25,7 @@ const DomainInfo = ({
   onAssignAccountable,
 }: DomainInfoProps) => {
   const { getAllUsers } = useUser();
+  const [selectedAccountable, setSelectedAccountable] = useState<any>(null);
   
   // Get users with Domain Accountable role
   const allUsers = getAllUsers();
@@ -32,8 +33,19 @@ const DomainInfo = ({
     user.role === UserRole.DomainAccountable
   );
   
-  // Find selected accountable user to display their full name and business role
-  const selectedAccountable = accountableUsers.find(user => user.id === assignedAccountableId);
+  // Find and set selected accountable user when assignedAccountableId changes
+  useEffect(() => {
+    if (assignedAccountableId && assignedAccountableId !== 'none') {
+      const foundUser = accountableUsers.find(user => user.id === assignedAccountableId);
+      setSelectedAccountable(foundUser || null);
+    } else {
+      setSelectedAccountable(null);
+    }
+  }, [assignedAccountableId, accountableUsers]);
+
+  const handleAccountableChange = (userId: string) => {
+    onAssignAccountable(userId === 'none' ? '' : userId);
+  };
 
   return (
     <div className="p-6 bg-white rounded-lg">
@@ -46,16 +58,18 @@ const DomainInfo = ({
           <div className="mt-4 md:mt-0 w-full md:w-64">
             <Select
               value={assignedAccountableId || "none"}
-              onValueChange={onAssignAccountable}
+              onValueChange={handleAccountableChange}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Assign Domain Accountable" />
+                <SelectValue placeholder="Assign Domain Accountable">
+                  {selectedAccountable ? selectedAccountable.name : "None"}
+                </SelectValue>
               </SelectTrigger>
-              <SelectContent className="bg-white">
+              <SelectContent className="bg-white z-50 shadow-md">
                 <SelectItem value="none">None</SelectItem>
                 {accountableUsers.map((user) => (
                   <SelectItem key={user.id} value={user.id}>
-                    {user.name} ({user.businessRole || 'No Business Role'})
+                    {user.name} {user.businessRole && `(${user.businessRole})`}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -64,7 +78,7 @@ const DomainInfo = ({
         )}
       </div>
 
-      {assignedAccountableId && assignedAccountableId !== 'none' && (
+      {selectedAccountable && (
         <div className="bg-blue-50 p-4 rounded-lg mb-6 border border-blue-100 animate-fade-in">
           <div className="flex items-center gap-2 text-blue-700">
             <UserCheck className="h-5 w-5" />

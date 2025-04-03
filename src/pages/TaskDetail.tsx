@@ -10,14 +10,7 @@ import { Clock, Check, AlertCircle, Users, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { useUser } from '@/contexts/UserContext';
 import { UserRole } from '@/types/compliance';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { useAllocationHistory } from '@/hooks/useAllocationHistory';
+import TaskOwnerSelect from '@/components/TaskOwnerSelect';
 
 const TaskDetail = () => {
   const { domainId, taskId } = useParams<{ domainId: string; taskId: string }>();
@@ -25,11 +18,6 @@ const TaskDetail = () => {
   const { toast } = useToast();
   const { loading, domain, setDomain } = useDomainDetail(domainId);
   const [task, setTask] = useState<TaskForUI | null>(null);
-  const { getAllUsers } = useUser();
-  const { addAllocationHistoryEntry } = useAllocationHistory();
-
-  const users = getAllUsers();
-  const taskManagers = users.filter(user => user.role === UserRole.TaskManager);
 
   useEffect(() => {
     if (domain && !loading && taskId) {
@@ -55,7 +43,10 @@ const TaskDetail = () => {
   const handleOwnerChange = (userId: string) => {
     if (!task || !domain) return;
     
+    const { getAllUsers } = useUser();
+    const users = getAllUsers();
     const selectedUser = users.find(user => user.id === userId);
+    
     if (!selectedUser) return;
 
     const updatedTask = {
@@ -81,15 +72,6 @@ const TaskDetail = () => {
       setDomain(updatedDomain);
       
       setTask(updatedTask);
-      
-      addAllocationHistoryEntry({
-        userId: selectedUser.id,
-        domainName: domain.title,
-        taskName: task.title,
-        action: 'assigned',
-        timestamp: new Date().toISOString(),
-        role: 'TaskManager'
-      });
 
       toast({
         title: "Owner Updated",
@@ -183,27 +165,13 @@ const TaskDetail = () => {
                 <Users className="w-5 h-5 text-gray-500" />
                 <div>
                   <div className="text-sm text-gray-500">Owner</div>
-                  <Select 
-                    value={task.owner?.id} 
-                    onValueChange={handleOwnerChange}
-                  >
-                    <SelectTrigger className="bg-transparent border-none shadow-none p-0 h-auto">
-                      <SelectValue placeholder="Assign an owner">
-                        {task.owner ? `${task.owner.firstName} ${task.owner.lastName}` : "Unassigned"}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent className="bg-white z-50">
-                      {taskManagers.length > 0 ? (
-                        taskManagers.map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.name} {user.businessRole && `(${user.businessRole})`}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="none" disabled>No Task Managers available</SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
+                  {domain && (
+                    <TaskOwnerSelect 
+                      task={task} 
+                      domainTitle={domain.title} 
+                      onOwnerChange={handleOwnerChange}
+                    />
+                  )}
                 </div>
               </div>
             </div>
