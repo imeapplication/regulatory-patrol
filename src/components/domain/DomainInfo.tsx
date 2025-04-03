@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { DocumentText, Calendar, Users } from 'lucide-react';
+import { Calendar, Users } from 'lucide-react';
 
 interface DomainInfoProps {
   domain: DomainForUI;
@@ -70,7 +70,7 @@ const DomainInfo = ({ domain, canEdit, onResponsibleChange }: DomainInfoProps) =
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
         <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
-          <DocumentText className="w-5 h-5 text-gray-500" />
+          <div className="w-5 h-5 text-gray-500">📄</div>
           <div>
             <div className="text-sm text-gray-500">Effort</div>
             <div className="font-medium">{domain.mandays} man-days</div>
@@ -147,7 +147,7 @@ const DomainInfo = ({ domain, canEdit, onResponsibleChange }: DomainInfoProps) =
 
       {domain.documentLink && (
         <div className="mt-4 flex items-center">
-          <DocumentText className="h-4 w-4 mr-2 text-blue-500" />
+          <div className="h-4 w-4 mr-2 text-blue-500">📄</div>
           <a 
             href={domain.documentLink}
             target="_blank"

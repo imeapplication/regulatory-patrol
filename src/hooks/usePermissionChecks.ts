@@ -35,9 +35,15 @@ export const usePermissionChecks = ({ currentUser }: PermissionChecksProps) => {
     return manageableTasks.includes(taskName);
   };
 
+  // Added function to check if user can manage a domain
+  const checkCanManageDomain = (domainName: string): boolean => {
+    return isDomainAccountableFor(domainName) || isDomainManagerFor(domainName);
+  };
+
   return {
     isDomainAccountableFor,
     isDomainManagerFor,
-    isTaskManagerFor
+    isTaskManagerFor,
+    checkCanManageDomain
   };
 };

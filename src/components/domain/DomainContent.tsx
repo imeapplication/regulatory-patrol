@@ -17,7 +17,8 @@ interface DomainContentProps {
 
 const DomainContent = ({ domain, setDomain, onSelectTask }: DomainContentProps) => {
   const { getAllUsers, updateUser } = useUser();
-  const { checkCanManageDomain } = usePermissionChecks();
+  const { currentUser } = useUser();
+  const { checkCanManageDomain } = usePermissionChecks({ currentUser });
   const { addAllocationHistoryEntry } = useAllocationHistory();
   const canManageDomain = checkCanManageDomain(domain.title);
 
