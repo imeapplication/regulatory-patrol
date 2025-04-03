@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { UserRole, getRolePermissions } from '@/types/compliance';
 import Navbar from '@/components/Navbar';
@@ -8,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 
-const UserRoles = () => {
+const ComplianceRoles = () => {
   // Get all available roles from the UserRole enum
   const roles = Object.values(UserRole);
 
@@ -17,13 +16,13 @@ const UserRoles = () => {
       <Navbar />
       <div className="container mx-auto px-4 pt-24 pb-12">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">User Roles & Permissions</h1>
+          <h1 className="text-3xl font-bold">Compliance Roles & Permissions</h1>
           <Button asChild>
             <Link to="/business-roles">Manage Business Roles</Link>
           </Button>
         </div>
         <p className="mb-8 text-muted-foreground">
-          This page displays all available user roles in the system and their associated permissions.
+          This page displays all available compliance roles in the system and their associated permissions.
         </p>
 
         <div className="grid gap-8">
@@ -184,4 +183,4 @@ const UserRoles = () => {
   );
 };
 
-export default UserRoles;
+export default ComplianceRoles;

@@ -14,7 +14,7 @@ import TaskDetail from "./pages/TaskDetail";
 import JsonView from "./pages/JsonView";
 import NotFound from "./pages/NotFound";
 import UserManagement from "./pages/UserManagement";
-import UserRoles from "./pages/UserRoles";
+import ComplianceRoles from "./pages/ComplianceRoles";
 import DomainAllocation from "./pages/DomainAllocation";
 import UserTimeline from "./pages/UserTimeline";
 import BusinessRoles from "./pages/BusinessRoles";
@@ -74,7 +74,7 @@ const App = () => (
               path="/roles" 
               element={
                 <ProtectedRoute>
-                  <UserRoles />
+                  <ComplianceRoles />
                 </ProtectedRoute>
               } 
             />

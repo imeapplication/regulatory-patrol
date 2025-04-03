@@ -75,7 +75,7 @@ const Navbar = () => {
                   <DropdownMenuItem asChild>
                     <Link to="/roles">
                       <UserCheck className="mr-2 h-4 w-4" />
-                      <span>User Roles</span>
+                      <span>Compliance Roles</span>
                     </Link>
                   </DropdownMenuItem>
                   
