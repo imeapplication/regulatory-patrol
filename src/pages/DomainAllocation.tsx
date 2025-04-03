@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useUser } from '@/contexts/UserContext';
 import Navbar from '@/components/Navbar';
 import { complianceData } from '@/data/complianceData';
-import { Domain, User } from '@/types/compliance';
+import { Domain, User, UserRole } from '@/types/compliance';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AccountableTab from '@/components/domain-allocation/AccountableTab';
@@ -31,11 +31,11 @@ const DomainAllocation = () => {
     const allUsers = getAllUsers();
     
     // Filter users to get only Domain Accountable users
-    const filteredAccountableUsers = allUsers.filter(user => user.role === 'DomainAccountable');
+    const filteredAccountableUsers = allUsers.filter(user => user.role === UserRole.DomainAccountable);
     setAccountableUsers(filteredAccountableUsers);
     
     // Filter users to get only Domain Manager users
-    const filteredManagerUsers = allUsers.filter(user => user.role === 'DomainManager');
+    const filteredManagerUsers = allUsers.filter(user => user.role === UserRole.DomainManager);
     setManagerUsers(filteredManagerUsers);
     
     // Initialize domain accountable assignments from current user permissions
