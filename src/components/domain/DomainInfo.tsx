@@ -32,7 +32,7 @@ const DomainInfo = ({
     user.role === UserRole.DomainAccountable
   );
   
-  // Find selected accountable user to display their full name
+  // Find selected accountable user to display their full name and business role
   const selectedAccountable = accountableUsers.find(user => user.id === assignedAccountableId);
 
   return (
@@ -70,7 +70,8 @@ const DomainInfo = ({
             <UserCheck className="h-5 w-5" />
             <p className="font-medium">
               <span className="opacity-70">Domain Accountable:</span>{' '}
-              {selectedAccountable?.name || 'Unknown User'}
+              {selectedAccountable?.name || 'Unknown User'}{' '}
+              {selectedAccountable?.businessRole && <span className="text-sm bg-blue-100 px-2 py-1 rounded ml-1">({selectedAccountable.businessRole})</span>}
             </p>
           </div>
         </div>
@@ -105,19 +106,17 @@ const DomainInfo = ({
           </CardContent>
         </Card>
         
-        {domain.responsible && (
-          <Card className="border shadow-sm bg-gradient-to-br from-blue-50 to-white">
-            <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-              <div className="text-purple-500 mb-2">
-                <UserCheck className="h-8 w-8 mx-auto mb-2" />
-                <span className="text-sm font-medium">Accountable Role</span>
-              </div>
-              <div className="text-md font-semibold text-purple-700 bg-purple-50 px-3 py-1 rounded-full">
-                {domain.responsible.role || 'Not assigned'}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        <Card className="border shadow-sm bg-gradient-to-br from-blue-50 to-white">
+          <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+            <div className="text-purple-500 mb-2">
+              <UserCheck className="h-8 w-8 mx-auto mb-2" />
+              <span className="text-sm font-medium">Accountable Role</span>
+            </div>
+            <div className="text-md font-semibold text-purple-700 bg-purple-50 px-3 py-1 rounded-full">
+              {selectedAccountable?.businessRole || domain.responsible?.role || 'Not assigned'}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
