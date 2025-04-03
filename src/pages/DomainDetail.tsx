@@ -14,7 +14,7 @@ const DomainDetail = () => {
 
   const onSelectTask = (task: TaskForUI) => {
     if (domain) {
-      navigate(`/domain/${encodeURIComponent(domain.title)}/task/${encodeURIComponent(task.title)}`);
+      navigate(`/domain/${domainId}/task/${encodeURIComponent(task.title)}`);
     }
   };
 
@@ -30,7 +30,8 @@ const DomainDetail = () => {
     <DomainDetailLayout domainTitle={domain?.title}>
       <DomainContent 
         domain={domain} 
-        setDomain={setDomain} 
+        setDomain={setDomain}
+        onSelectTask={onSelectTask}
       />
     </DomainDetailLayout>
   );

@@ -10,9 +10,10 @@ import { DomainForUI, TaskForUI } from '@/hooks/useDomainDetail';
 interface DomainContentProps {
   domain: DomainForUI;
   setDomain: React.Dispatch<React.SetStateAction<DomainForUI | null>>;
+  onSelectTask: (task: TaskForUI) => void;
 }
 
-const DomainContent = ({ domain, setDomain }: DomainContentProps) => {
+const DomainContent = ({ domain, setDomain, onSelectTask }: DomainContentProps) => {
   const { toast } = useToast();
   const { isAdmin, currentUser, isDomainAccountableFor } = useUser();
   
@@ -56,10 +57,6 @@ const DomainContent = ({ domain, setDomain }: DomainContentProps) => {
   };
 
   const canManageTasks = isAdmin || (currentUser?.id === assignedAccountableId);
-
-  const onSelectTask = (task: TaskForUI) => {
-    // Navigation handled in the parent component
-  };
 
   return (
     <>
