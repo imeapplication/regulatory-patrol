@@ -23,7 +23,7 @@ const TaskOwnerSelect = ({ task, domainTitle, onOwnerChange }: TaskOwnerSelectPr
   const { getAllUsers } = useUser();
   const { addAllocationHistoryEntry } = useAllocationHistory();
   
-  // Get all task manager users
+  // Get all users and filter to only show Task Managers
   const users = getAllUsers();
   const taskManagers = users.filter(user => user.role === UserRole.TaskManager);
   
@@ -45,12 +45,16 @@ const TaskOwnerSelect = ({ task, domainTitle, onOwnerChange }: TaskOwnerSelectPr
           {currentOwner ? currentOwner.name : "Unassigned"}
         </SelectValue>
       </SelectTrigger>
-      <SelectContent className="bg-white">
-        {taskManagers.map((user) => (
-          <SelectItem key={user.id} value={user.id}>
-            {user.name} ({user.role})
-          </SelectItem>
-        ))}
+      <SelectContent className="bg-white z-50">
+        {taskManagers.length > 0 ? (
+          taskManagers.map((user) => (
+            <SelectItem key={user.id} value={user.id}>
+              {user.name} {user.businessRole && `(${user.businessRole})`}
+            </SelectItem>
+          ))
+        ) : (
+          <SelectItem value="none" disabled>No Task Managers available</SelectItem>
+        )}
       </SelectContent>
     </Select>
   );

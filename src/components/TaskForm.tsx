@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -57,11 +56,9 @@ const TaskForm = ({ onTaskCreated, onCancel, domainName }: TaskFormProps) => {
   
   const allUsers = getAllUsers();
   
-  // Filter to only show Task Managers or admins as valid owners
+  // Filter to only show Task Managers as valid owners
   const validTaskOwners = allUsers.filter(user => 
-    user.role === UserRole.TaskManager || 
-    user.role === UserRole.DomainAccountable ||
-    user.role === UserRole.Administrator
+    user.role === UserRole.TaskManager
   );
   
   const defaultValues: Partial<TaskFormValues> = {
@@ -184,12 +181,16 @@ const TaskForm = ({ onTaskCreated, onCancel, domainName }: TaskFormProps) => {
                     <SelectValue placeholder="Select a Task Owner" />
                   </SelectTrigger>
                 </FormControl>
-                <SelectContent className="bg-white">
-                  {validTaskOwners.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.name} ({user.role})
-                    </SelectItem>
-                  ))}
+                <SelectContent className="bg-white z-50">
+                  {validTaskOwners.length > 0 ? (
+                    validTaskOwners.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.name} {user.businessRole && `(${user.businessRole})`}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="none" disabled>No Task Managers available</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
               <FormMessage />

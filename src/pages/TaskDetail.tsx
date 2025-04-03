@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DomainDetailLayout from '@/components/domain/DomainDetailLayout';
@@ -29,12 +28,10 @@ const TaskDetail = () => {
   const { getAllUsers } = useUser();
   const { addAllocationHistoryEntry } = useAllocationHistory();
 
-  // Get all task manager users
   const users = getAllUsers();
   const taskManagers = users.filter(user => user.role === UserRole.TaskManager);
 
   useEffect(() => {
-    // Find the task in the domain when data is loaded
     if (domain && !loading && taskId) {
       const decodedTaskId = decodeURIComponent(taskId);
       const foundTask = domain.tasks?.find(t => t.title === decodedTaskId);
@@ -42,7 +39,6 @@ const TaskDetail = () => {
       if (foundTask) {
         setTask(foundTask);
       } else {
-        // Task not found in this domain
         toast({
           title: "Task not found",
           description: `Could not find task "${decodedTaskId}" in this domain.`,
@@ -56,14 +52,12 @@ const TaskDetail = () => {
     navigate(`/domain/${domainId}`);
   };
 
-  // Handle owner change
   const handleOwnerChange = (userId: string) => {
     if (!task || !domain) return;
     
     const selectedUser = users.find(user => user.id === userId);
     if (!selectedUser) return;
 
-    // Create the updated task with new owner
     const updatedTask = {
       ...task,
       owner: {
@@ -74,25 +68,20 @@ const TaskDetail = () => {
       }
     };
 
-    // Update the task in the domain
     if (domain.tasks) {
       const updatedTasks = domain.tasks.map(t => 
         t.title === task.title ? updatedTask : t
       );
 
-      // Update domain with updated tasks
       const updatedDomain = {
         ...domain,
         tasks: updatedTasks
       };
 
-      // Update the domain state
       setDomain(updatedDomain);
       
-      // Update the task state
       setTask(updatedTask);
       
-      // Add allocation history entry
       addAllocationHistoryEntry({
         userId: selectedUser.id,
         domainName: domain.title,
@@ -109,7 +98,6 @@ const TaskDetail = () => {
     }
   };
 
-  // Handle status badges
   const getStatusBadge = (status: number) => {
     switch(status) {
       case 0:
@@ -123,7 +111,6 @@ const TaskDetail = () => {
     }
   };
 
-  // Format date for display
   const formatDate = (dateString: string) => {
     try {
       return format(new Date(dateString), 'MMM d, yyyy');
@@ -205,12 +192,16 @@ const TaskDetail = () => {
                         {task.owner ? `${task.owner.firstName} ${task.owner.lastName}` : "Unassigned"}
                       </SelectValue>
                     </SelectTrigger>
-                    <SelectContent className="bg-white">
-                      {taskManagers.map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.name} ({user.role})
-                        </SelectItem>
-                      ))}
+                    <SelectContent className="bg-white z-50">
+                      {taskManagers.length > 0 ? (
+                        taskManagers.map((user) => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {user.name} {user.businessRole && `(${user.businessRole})`}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="none" disabled>No Task Managers available</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
