@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { UserRole, getRolePermissions } from '@/types/compliance';
 import Navbar from '@/components/Navbar';
@@ -18,7 +19,7 @@ const ComplianceRoles = () => {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Compliance Roles & Permissions</h1>
           <Button asChild>
-            <Link to="/business-roles">Manage Business Roles</Link>
+            <Link to="/roles">Manage Compliance Roles</Link>
           </Button>
         </div>
         <p className="mb-8 text-muted-foreground">
