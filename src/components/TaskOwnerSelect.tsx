@@ -26,6 +26,9 @@ const TaskOwnerSelect = ({ task, domainTitle, onOwnerChange }: TaskOwnerSelectPr
   // Get all task manager users
   const users = getAllUsers();
   const taskManagers = users.filter(user => user.role === UserRole.TaskManager);
+  
+  // Find the current owner to display properly
+  const currentOwner = task.owner ? taskManagers.find(user => user.id === task.owner?.id) : null;
 
   // Handle owner change with history tracking
   const handleSelectChange = (userId: string) => {
@@ -39,7 +42,7 @@ const TaskOwnerSelect = ({ task, domainTitle, onOwnerChange }: TaskOwnerSelectPr
     >
       <SelectTrigger className="bg-transparent border-none shadow-none p-0 h-auto">
         <SelectValue placeholder="Assign an owner">
-          {task.owner ? `${task.owner.firstName} ${task.owner.lastName}` : "Unassigned"}
+          {currentOwner ? currentOwner.name : "Unassigned"}
         </SelectValue>
       </SelectTrigger>
       <SelectContent className="bg-white">

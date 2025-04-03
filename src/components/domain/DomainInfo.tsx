@@ -31,6 +31,9 @@ const DomainInfo = ({
   const accountableUsers = allUsers.filter(user => 
     user.role === UserRole.DomainAccountable
   );
+  
+  // Find selected accountable user to display their full name
+  const selectedAccountable = accountableUsers.find(user => user.id === assignedAccountableId);
 
   return (
     <div className="p-6 bg-white rounded-lg">
@@ -42,7 +45,7 @@ const DomainInfo = ({
         {isAdmin && (
           <div className="mt-4 md:mt-0 w-full md:w-64">
             <Select
-              value={assignedAccountableId}
+              value={assignedAccountableId || "none"}
               onValueChange={onAssignAccountable}
             >
               <SelectTrigger className="w-full">
@@ -67,7 +70,7 @@ const DomainInfo = ({
             <UserCheck className="h-5 w-5" />
             <p className="font-medium">
               <span className="opacity-70">Domain Accountable:</span>{' '}
-              {accountableUsers.find(user => user.id === assignedAccountableId)?.name || 'Unknown User'}
+              {selectedAccountable?.name || 'Unknown User'}
             </p>
           </div>
         </div>
