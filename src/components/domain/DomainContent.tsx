@@ -56,7 +56,9 @@ const DomainContent = ({ domain, setDomain, onSelectTask }: DomainContentProps) 
           ...domain,
           responsible: {
             id: selectedUser.id,
-            role: selectedUser.businessRole || selectedUser.role,
+            firstName: selectedUser.name.split(' ')[0] || '',
+            lastName: selectedUser.name.split(' ')[1] || '',
+            role: selectedUser.businessRole || selectedUser.role
           }
         };
         
