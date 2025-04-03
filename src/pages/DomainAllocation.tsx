@@ -3,24 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { useUser } from '@/contexts/UserContext';
 import Navbar from '@/components/Navbar';
 import { complianceData } from '@/data/complianceData';
-import { Domain, User, UserRole } from '@/types/compliance';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Domain, User } from '@/types/compliance';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import AccountableTab from '@/components/domain-allocation/AccountableTab';
+import ManagerTab from '@/components/domain-allocation/ManagerTab';
 
 const DomainAllocation = () => {
   const { 
@@ -44,11 +31,11 @@ const DomainAllocation = () => {
     const allUsers = getAllUsers();
     
     // Filter users to get only Domain Accountable users
-    const filteredAccountableUsers = allUsers.filter(user => user.role === UserRole.DomainAccountable);
+    const filteredAccountableUsers = allUsers.filter(user => user.role === 'DomainAccountable');
     setAccountableUsers(filteredAccountableUsers);
     
     // Filter users to get only Domain Manager users
-    const filteredManagerUsers = allUsers.filter(user => user.role === UserRole.DomainManager);
+    const filteredManagerUsers = allUsers.filter(user => user.role === 'DomainManager');
     setManagerUsers(filteredManagerUsers);
     
     // Initialize domain accountable assignments from current user permissions
@@ -175,119 +162,21 @@ const DomainAllocation = () => {
             </TabsList>
             
             <TabsContent value="accountable">
-              <p className="mb-4">
-                Assign domain accountable users to specific domains. Each domain can have one accountable user who will be responsible for managing tasks within that domain.
-              </p>
-              
-              {accountableUsers.length === 0 && (
-                <div className="bg-yellow-50 p-4 rounded-md mb-4">
-                  <p className="text-yellow-700">
-                    No domain accountable users found. Create users with the "Domain Accountable" role first.
-                  </p>
-                </div>
-              )}
-              
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Domain Name</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Assigned Accountable</TableHead>
-                    <TableHead className="w-48">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {domains.map((domain) => (
-                    <TableRow key={domain.name}>
-                      <TableCell className="font-medium">{domain.name}</TableCell>
-                      <TableCell className="max-w-md truncate">{domain.description}</TableCell>
-                      <TableCell>
-                        {domainAccountableAssignments[domain.name] ? (
-                          accountableUsers.find(user => user.id === domainAccountableAssignments[domain.name])?.name || 'Unknown'
-                        ) : (
-                          <span className="text-gray-400">Not assigned</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={domainAccountableAssignments[domain.name] || ''}
-                          onValueChange={(value) => handleDomainAccountableAssignment(domain.name, value || null)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Assign user" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">None</SelectItem>
-                            {accountableUsers.map((user) => (
-                              <SelectItem key={user.id} value={user.id}>
-                                {user.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <AccountableTab 
+                domains={domains}
+                accountableUsers={accountableUsers}
+                domainAccountableAssignments={domainAccountableAssignments}
+                handleDomainAccountableAssignment={handleDomainAccountableAssignment}
+              />
             </TabsContent>
             
             <TabsContent value="manager">
-              <p className="mb-4">
-                Assign domain manager users to specific domains. Each domain can have one manager user who will be responsible for overseeing domain activities.
-              </p>
-              
-              {managerUsers.length === 0 && (
-                <div className="bg-yellow-50 p-4 rounded-md mb-4">
-                  <p className="text-yellow-700">
-                    No domain manager users found. Create users with the "Domain Manager" role first.
-                  </p>
-                </div>
-              )}
-              
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Domain Name</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Assigned Manager</TableHead>
-                    <TableHead className="w-48">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {domains.map((domain) => (
-                    <TableRow key={`manager-${domain.name}`}>
-                      <TableCell className="font-medium">{domain.name}</TableCell>
-                      <TableCell className="max-w-md truncate">{domain.description}</TableCell>
-                      <TableCell>
-                        {domainManagerAssignments[domain.name] ? (
-                          managerUsers.find(user => user.id === domainManagerAssignments[domain.name])?.name || 'Unknown'
-                        ) : (
-                          <span className="text-gray-400">Not assigned</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={domainManagerAssignments[domain.name] || ''}
-                          onValueChange={(value) => handleDomainManagerAssignment(domain.name, value || null)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Assign user" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">None</SelectItem>
-                            {managerUsers.map((user) => (
-                              <SelectItem key={user.id} value={user.id}>
-                                {user.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <ManagerTab 
+                domains={domains}
+                managerUsers={managerUsers}
+                domainManagerAssignments={domainManagerAssignments}
+                handleDomainManagerAssignment={handleDomainManagerAssignment}
+              />
             </TabsContent>
           </Tabs>
         </div>
