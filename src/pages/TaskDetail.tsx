@@ -21,10 +21,10 @@ const TaskDetail = () => {
   const { loading, domain, setDomain } = useDomainDetail(domainId);
   const [task, setTask] = useState<TaskForUI | null>(null);
   const { getAllUsers, updateUser } = useUser();
-  const { addAllocationHistoryEntry } = useAllocationHistory();
+  const { addAllocationHistoryEntry, getAllocationHistory } = useAllocationHistory();
   
   // Initialize task management hooks with proper context
-  const { updateTaskOwner } = useTaskManagement({
+  const { updateTaskOwner, syncTasksWithPermissions } = useTaskManagement({
     users: getAllUsers(),
     updateUser,
     addAllocationHistoryEntry
@@ -36,7 +36,33 @@ const TaskDetail = () => {
       const foundTask = domain.tasks?.find(t => t.title === decodedTaskId);
       
       if (foundTask) {
-        setTask(foundTask);
+        // Get allocation history for this task to find when the owner was assigned
+        const allocationHistory = getAllocationHistory();
+        const taskHistory = allocationHistory.filter(entry => 
+          entry.taskName === foundTask.title && entry.action === 'assigned'
+        );
+        
+        // Find the most recent assignment for the current owner
+        let ownerSince = null;
+        if (foundTask.owner?.id) {
+          const ownerAssignments = taskHistory.filter(
+            entry => entry.userId === foundTask.owner?.id
+          );
+          
+          if (ownerAssignments.length > 0) {
+            // Sort by timestamp, newest first
+            ownerAssignments.sort((a, b) => 
+              new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+            );
+            ownerSince = ownerAssignments[0].timestamp;
+          }
+        }
+        
+        // Update task with owner assignment date
+        setTask({
+          ...foundTask,
+          ownerSince
+        });
       } else {
         toast({
           title: "Task not found",
@@ -45,7 +71,14 @@ const TaskDetail = () => {
         });
       }
     }
-  }, [domain, loading, taskId, toast]);
+  }, [domain, loading, taskId, toast, getAllocationHistory]);
+
+  // Sync task permissions with user data
+  useEffect(() => {
+    if (domain && domain.tasks && !loading) {
+      syncTasksWithPermissions(domain.tasks, domain.title);
+    }
+  }, [domain, loading, syncTasksWithPermissions]);
 
   const handleBack = () => {
     navigate(`/domain/${domainId}`);
@@ -59,6 +92,14 @@ const TaskDetail = () => {
     
     if (!selectedUser) return;
 
+    // Track when the owner was assigned
+    const assignmentTimestamp = updateTaskOwner(
+      task.owner?.id, 
+      userId, 
+      domain.title, 
+      task
+    );
+
     const updatedTask = {
       ...task,
       owner: {
@@ -66,16 +107,10 @@ const TaskDetail = () => {
         firstName: selectedUser.name.split(' ')[0] || selectedUser.name,
         lastName: selectedUser.name.split(' ')[1] || '',
         role: selectedUser.businessRole || selectedUser.role
-      }
+      },
+      ownerSince: assignmentTimestamp || new Date().toISOString(),
+      lastUpdated: new Date().toISOString()
     };
-
-    // Sync with the task management system to update user permissions
-    updateTaskOwner(
-      task.owner?.id, 
-      userId, 
-      domain.title, 
-      task
-    );
 
     if (domain.tasks) {
       const updatedTasks = domain.tasks.map(t => 

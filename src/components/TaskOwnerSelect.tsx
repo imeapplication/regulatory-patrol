@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/select';
 import { TaskForUI } from '@/hooks/useDomainDetail';
 import { useTaskManagement } from '@/hooks/useTaskManagement';
+import { format, parseISO } from 'date-fns';
 
 interface TaskOwnerSelectProps {
   task: TaskForUI;
@@ -21,8 +22,9 @@ interface TaskOwnerSelectProps {
 
 const TaskOwnerSelect = ({ task, domainTitle, onOwnerChange }: TaskOwnerSelectProps) => {
   const { getAllUsers, updateUser } = useUser();
-  const { addAllocationHistoryEntry } = useAllocationHistory();
+  const { addAllocationHistoryEntry, getAllocationHistory } = useAllocationHistory();
   const [currentOwnerId, setCurrentOwnerId] = useState<string | undefined>(task.owner?.id);
+  const [ownerSince, setOwnerSince] = useState<string | null>(null);
   
   // Initialize task management hooks
   const { getTaskManagerUsers } = useTaskManagement({
@@ -34,6 +36,30 @@ const TaskOwnerSelect = ({ task, domainTitle, onOwnerChange }: TaskOwnerSelectPr
   // Get all users and filter to only show Task Managers
   const users = getAllUsers();
   const taskManagers = users.filter(user => user.role === UserRole.TaskManager);
+  
+  // Find the current owner assignment date
+  useEffect(() => {
+    if (task.owner?.id) {
+      const allocationHistory = getAllocationHistory();
+      const ownerHistory = allocationHistory.filter(
+        entry => entry.userId === task.owner?.id && 
+                entry.taskName === task.title && 
+                entry.action === 'assigned'
+      );
+      
+      if (ownerHistory.length > 0) {
+        // Sort by timestamp, newest first
+        ownerHistory.sort((a, b) => 
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        );
+        setOwnerSince(ownerHistory[0].timestamp);
+      } else {
+        setOwnerSince(null);
+      }
+    } else {
+      setOwnerSince(null);
+    }
+  }, [task, getAllocationHistory]);
   
   // Check if the task is in user's permissions
   useEffect(() => {
@@ -97,27 +123,35 @@ const TaskOwnerSelect = ({ task, domainTitle, onOwnerChange }: TaskOwnerSelectPr
   const currentOwner = taskManagers.find(user => user.id === currentOwnerId);
 
   return (
-    <Select 
-      value={currentOwnerId} 
-      onValueChange={handleSelectChange}
-    >
-      <SelectTrigger className="bg-transparent border-none shadow-none p-0 h-auto">
-        <SelectValue placeholder="Assign an owner">
-          {currentOwner ? currentOwner.name : "Unassigned"}
-        </SelectValue>
-      </SelectTrigger>
-      <SelectContent className="bg-white z-50 shadow-md">
-        {taskManagers.length > 0 ? (
-          taskManagers.map((user) => (
-            <SelectItem key={user.id} value={user.id}>
-              {user.name} {user.businessRole && `(${user.businessRole})`}
-            </SelectItem>
-          ))
-        ) : (
-          <SelectItem value="none" disabled>No Task Managers available</SelectItem>
-        )}
-      </SelectContent>
-    </Select>
+    <div>
+      <Select 
+        value={currentOwnerId} 
+        onValueChange={handleSelectChange}
+      >
+        <SelectTrigger className="bg-transparent border-none shadow-none p-0 h-auto">
+          <SelectValue placeholder="Assign an owner">
+            {currentOwner ? currentOwner.name : "Unassigned"}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent className="bg-white z-50 shadow-md">
+          {taskManagers.length > 0 ? (
+            taskManagers.map((user) => (
+              <SelectItem key={user.id} value={user.id}>
+                {user.name} {user.businessRole && `(${user.businessRole})`}
+              </SelectItem>
+            ))
+          ) : (
+            <SelectItem value="none" disabled>No Task Managers available</SelectItem>
+          )}
+        </SelectContent>
+      </Select>
+      
+      {ownerSince && (
+        <div className="text-xs text-gray-500 mt-1">
+          Assigned {format(parseISO(ownerSince), 'MMM d, yyyy')}
+        </div>
+      )}
+    </div>
   );
 };
 
