@@ -19,7 +19,7 @@ const ComplianceRoles = () => {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Compliance Roles & Permissions</h1>
           <Button asChild>
-            <Link to="/roles">Manage Compliance Roles</Link>
+            <Link to="/users">Manage Compliance Roles</Link>
           </Button>
         </div>
         <p className="mb-8 text-muted-foreground">
