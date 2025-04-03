@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext } from 'react';
 import { User, BusinessRole } from '@/types/compliance';
 import { AllocationHistoryEntry } from '@/types/userAllocation';
@@ -24,7 +23,7 @@ interface UserContextType {
   assignDomainToManager: (userId: string, domainName: string) => void;
   removeDomainFromManager: (userId: string, domainName: string) => void;
   assignTaskToManager: (userId: string, domainName: string, taskName: string) => void;
-  removeTaskFromManager: (userId: string, taskName: string) => void;
+  removeTaskFromManager: (userId: string, domainName: string, taskName: string) => void;
   isDomainAccountableFor: (domainName: string) => boolean;
   isDomainManagerFor: (domainName: string) => boolean;
   isTaskManagerFor: (taskName: string) => boolean;
