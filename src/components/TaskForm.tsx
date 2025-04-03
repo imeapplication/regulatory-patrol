@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -23,9 +24,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
-import { useQuery } from '@apollo/client';
-import { GET_USERS } from '@/graphql/queries';
 import { UserRole } from '@/types/compliance';
+import { useAllocationHistory } from '@/hooks/useAllocationHistory';
 
 const taskSchema = z.object({
   title: z.string().min(2, {
@@ -47,13 +47,17 @@ type TaskFormValues = z.infer<typeof taskSchema>;
 interface TaskFormProps {
   onTaskCreated: (task: Partial<Task>) => void;
   onCancel: () => void;
+  domainName?: string;
 }
 
-const TaskForm = ({ onTaskCreated, onCancel }: TaskFormProps) => {
+const TaskForm = ({ onTaskCreated, onCancel, domainName }: TaskFormProps) => {
   const { toast } = useToast();
   const { currentUser, getAllUsers } = useUser();
+  const { addAllocationHistoryEntry } = useAllocationHistory();
   
   const allUsers = getAllUsers();
+  
+  // Filter to only show Task Managers or admins as valid owners
   const validTaskOwners = allUsers.filter(user => 
     user.role === UserRole.TaskManager || 
     user.role === UserRole.DomainAccountable ||
@@ -87,6 +91,18 @@ const TaskForm = ({ onTaskCreated, onCancel }: TaskFormProps) => {
           role: selectedUser.businessRole || selectedUser.role
         } : undefined
       };
+      
+      // Track task allocation in history
+      if (selectedUser && domainName) {
+        addAllocationHistoryEntry({
+          userId: selectedUser.id,
+          domainName,
+          taskName: data.title,
+          action: 'assigned',
+          timestamp: new Date().toISOString(),
+          role: 'TaskManager'
+        });
+      }
       
       onTaskCreated(newTask);
       

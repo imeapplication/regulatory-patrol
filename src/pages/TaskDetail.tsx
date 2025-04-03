@@ -9,13 +9,29 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Clock, Check, AlertCircle, Users, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
+import { useUser } from '@/contexts/UserContext';
+import { UserRole } from '@/types/compliance';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useAllocationHistory } from '@/hooks/useAllocationHistory';
 
 const TaskDetail = () => {
   const { domainId, taskId } = useParams<{ domainId: string; taskId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { loading, domain } = useDomainDetail(domainId);
+  const { loading, domain, setDomain } = useDomainDetail(domainId);
   const [task, setTask] = useState<TaskForUI | null>(null);
+  const { getAllUsers } = useUser();
+  const { addAllocationHistoryEntry } = useAllocationHistory();
+
+  // Get all task manager users
+  const users = getAllUsers();
+  const taskManagers = users.filter(user => user.role === UserRole.TaskManager);
 
   useEffect(() => {
     // Find the task in the domain when data is loaded
@@ -38,6 +54,59 @@ const TaskDetail = () => {
 
   const handleBack = () => {
     navigate(`/domain/${domainId}`);
+  };
+
+  // Handle owner change
+  const handleOwnerChange = (userId: string) => {
+    if (!task || !domain) return;
+    
+    const selectedUser = users.find(user => user.id === userId);
+    if (!selectedUser) return;
+
+    // Create the updated task with new owner
+    const updatedTask = {
+      ...task,
+      owner: {
+        id: selectedUser.id,
+        firstName: selectedUser.name,
+        lastName: '',
+        role: selectedUser.businessRole || selectedUser.role
+      }
+    };
+
+    // Update the task in the domain
+    if (domain.tasks) {
+      const updatedTasks = domain.tasks.map(t => 
+        t.title === task.title ? updatedTask : t
+      );
+
+      // Update domain with updated tasks
+      const updatedDomain = {
+        ...domain,
+        tasks: updatedTasks
+      };
+
+      // Update the domain state
+      setDomain(updatedDomain);
+      
+      // Update the task state
+      setTask(updatedTask);
+      
+      // Add allocation history entry
+      addAllocationHistoryEntry({
+        userId: selectedUser.id,
+        domainName: domain.title,
+        taskName: task.title,
+        action: 'assigned',
+        timestamp: new Date().toISOString(),
+        role: 'TaskManager'
+      });
+
+      toast({
+        title: "Owner Updated",
+        description: `Task owner has been updated to ${selectedUser.name}.`,
+      });
+    }
   };
 
   // Handle status badges
@@ -123,17 +192,29 @@ const TaskDetail = () => {
                 </div>
               </div>
 
-              {task.owner && (
-                <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
-                  <Users className="w-5 h-5 text-gray-500" />
-                  <div>
-                    <div className="text-sm text-gray-500">Owner</div>
-                    <div className="font-medium">
-                      {task.owner.firstName} {task.owner.lastName}
-                    </div>
-                  </div>
+              <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                <Users className="w-5 h-5 text-gray-500" />
+                <div>
+                  <div className="text-sm text-gray-500">Owner</div>
+                  <Select 
+                    value={task.owner?.id} 
+                    onValueChange={handleOwnerChange}
+                  >
+                    <SelectTrigger className="bg-transparent border-none shadow-none p-0 h-auto">
+                      <SelectValue placeholder="Assign an owner">
+                        {task.owner ? `${task.owner.firstName} ${task.owner.lastName}` : "Unassigned"}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      {taskManagers.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.name} ({user.role})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              )}
+              </div>
             </div>
           </CardContent>
         </Card>
