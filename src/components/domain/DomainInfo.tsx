@@ -6,12 +6,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { UserCheck, FileText, CalendarClock } from 'lucide-react';
 import AnimatedCounter from '@/components/ui-components/AnimatedCounter';
+import { useUser } from '@/contexts/UserContext';
+import { UserRole } from '@/types/compliance';
 
 interface DomainInfoProps {
   domain: Domain;
   domainName: string | undefined;
   isAdmin: boolean;
-  accountableUsers: { id: string; name: string }[];
   assignedAccountableId: string;
   onAssignAccountable: (userId: string) => void;
 }
@@ -20,10 +21,17 @@ const DomainInfo = ({
   domain,
   domainName,
   isAdmin,
-  accountableUsers,
   assignedAccountableId,
   onAssignAccountable,
 }: DomainInfoProps) => {
+  const { getAllUsers } = useUser();
+  
+  // Get users with Domain Accountable role
+  const allUsers = getAllUsers();
+  const accountableUsers = allUsers.filter(user => 
+    user.role === UserRole.DomainAccountable
+  );
+
   return (
     <div className="p-6 bg-white rounded-lg">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
@@ -44,7 +52,7 @@ const DomainInfo = ({
                 <SelectItem value="none">None</SelectItem>
                 {accountableUsers.map((user) => (
                   <SelectItem key={user.id} value={user.id}>
-                    {user.name}
+                    {user.name} ({user.businessRole || 'No Business Role'})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -53,13 +61,13 @@ const DomainInfo = ({
         )}
       </div>
 
-      {assignedAccountableId && (
+      {assignedAccountableId && assignedAccountableId !== 'none' && (
         <div className="bg-blue-50 p-4 rounded-lg mb-6 border border-blue-100 animate-fade-in">
           <div className="flex items-center gap-2 text-blue-700">
             <UserCheck className="h-5 w-5" />
             <p className="font-medium">
               <span className="opacity-70">Domain Accountable:</span>{' '}
-              {accountableUsers.find(user => user.id === assignedAccountableId)?.name}
+              {accountableUsers.find(user => user.id === assignedAccountableId)?.name || 'Unknown User'}
             </p>
           </div>
         </div>

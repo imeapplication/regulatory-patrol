@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -26,6 +25,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
 import { useQuery } from '@apollo/client';
 import { GET_USERS } from '@/graphql/queries';
+import { UserRole } from '@/types/compliance';
 
 const taskSchema = z.object({
   title: z.string().min(2, {
@@ -51,12 +51,14 @@ interface TaskFormProps {
 
 const TaskForm = ({ onTaskCreated, onCancel }: TaskFormProps) => {
   const { toast } = useToast();
-  const { currentUser } = useUser();
+  const { currentUser, getAllUsers } = useUser();
   
-  const { loading, error, data } = useQuery(GET_USERS);
-  
-  // Get all users who can be task owners
-  const users = data?.users || [];
+  const allUsers = getAllUsers();
+  const validTaskOwners = allUsers.filter(user => 
+    user.role === UserRole.TaskManager || 
+    user.role === UserRole.DomainAccountable ||
+    user.role === UserRole.Administrator
+  );
   
   const defaultValues: Partial<TaskFormValues> = {
     title: "",
@@ -72,8 +74,7 @@ const TaskForm = ({ onTaskCreated, onCancel }: TaskFormProps) => {
 
   function onSubmit(data: TaskFormValues) {
     try {
-      // Find the selected user
-      const selectedUser = users.find((user: any) => user.id === data.ownerId);
+      const selectedUser = validTaskOwners.find((user) => user.id === data.ownerId);
       
       const newTask: Partial<Task> = {
         title: data.title,
@@ -81,9 +82,9 @@ const TaskForm = ({ onTaskCreated, onCancel }: TaskFormProps) => {
         mandays: data.mandays,
         owner: selectedUser ? {
           id: selectedUser.id,
-          firstName: selectedUser.firstName,
-          lastName: selectedUser.lastName,
-          role: selectedUser.role
+          firstName: selectedUser.name,
+          lastName: '',
+          role: selectedUser.businessRole || selectedUser.role
         } : undefined
       };
       
@@ -101,14 +102,6 @@ const TaskForm = ({ onTaskCreated, onCancel }: TaskFormProps) => {
         variant: "destructive",
       });
     }
-  }
-
-  if (loading) {
-    return <p>Loading users...</p>;
-  }
-
-  if (error) {
-    return <p>Error loading users: {error.message}</p>;
   }
 
   return (
@@ -175,10 +168,10 @@ const TaskForm = ({ onTaskCreated, onCancel }: TaskFormProps) => {
                     <SelectValue placeholder="Select a Task Owner" />
                   </SelectTrigger>
                 </FormControl>
-                <SelectContent>
-                  {users.map((user: any) => (
+                <SelectContent className="bg-white">
+                  {validTaskOwners.map((user) => (
                     <SelectItem key={user.id} value={user.id}>
-                      {user.firstName} {user.lastName} ({user.role})
+                      {user.name} ({user.role})
                     </SelectItem>
                   ))}
                 </SelectContent>

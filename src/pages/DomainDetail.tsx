@@ -13,7 +13,6 @@ import DomainTasks from '@/components/domain/DomainTasks';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 
-// Define a domain interface that works with our components
 interface DomainForUI {
   id: string;
   title: string;
@@ -44,21 +43,19 @@ const DomainDetail = () => {
   const { domainId } = useParams<{ domainId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isAdmin, currentUser } = useUser();
+  const { isAdmin, currentUser, isDomainAccountableFor } = useUser();
   
   const [loading, setLoading] = useState(true);
   const [domain, setDomain] = useState<DomainForUI | null>(null);
   
   useEffect(() => {
     setLoading(true);
-    // Find domain in complianceData
     if (domainId) {
       const complianceDomain = complianceData.regulations.domains.find(
         (d: ComplianceDomain) => d.name === decodeURIComponent(domainId)
       );
       
       if (complianceDomain) {
-        // Map to the required format
         const mappedDomain: DomainForUI = {
           id: complianceDomain.name,
           title: complianceDomain.name,
@@ -95,7 +92,6 @@ const DomainDetail = () => {
     setLoading(false);
   }, [domainId]);
   
-  // Mock users for the accountable dropdown
   const accountableUsers = [
     { id: '1', name: 'DPO' },
     { id: '2', name: 'Environmental Officer' },
@@ -104,12 +100,9 @@ const DomainDetail = () => {
     { id: '5', name: 'Quality Director' }
   ];
   
-  // Find currently assigned accountable id
   const assignedAccountableId = domain?.responsible?.id || '';
   
   const handleAccountableAssignment = (userId: string) => {
-    // This would need to call a mutation to update domain responsible
-    // For now we'll just show a toast
     toast({
       title: 'Domain Accountable Updated',
       description: `User assignment has been updated.`,
@@ -122,8 +115,6 @@ const DomainDetail = () => {
       description: "Task has been successfully created.",
     });
     
-    // In a real app, we'd update the domain with the new task
-    // For now, we'll just simulate it
     if (domain && newTask.title) {
       const updatedDomain = { ...domain };
       const newTaskObj: TaskForUI = {
@@ -207,7 +198,6 @@ const DomainDetail = () => {
                 domain={domain as any}
                 domainName={domain?.title}
                 isAdmin={isAdmin}
-                accountableUsers={accountableUsers}
                 assignedAccountableId={assignedAccountableId}
                 onAssignAccountable={handleAccountableAssignment}
               />
