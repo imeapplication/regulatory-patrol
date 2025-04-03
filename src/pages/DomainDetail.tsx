@@ -7,12 +7,14 @@ import DomainError from '@/components/domain/DomainError';
 import DomainContent from '@/components/domain/DomainContent';
 import { useDomainDetail, TaskForUI } from '@/hooks/useDomainDetail';
 import { useUser } from '@/contexts/UserContext';
+import { useAllocationHistory } from '@/hooks/useAllocationHistory';
 
 const DomainDetail = () => {
   const { domainId } = useParams<{ domainId: string }>();
   const navigate = useNavigate();
   const { loading, domain, setDomain } = useDomainDetail(domainId);
   const { getAllUsers } = useUser();
+  const { addAllocationHistoryEntry } = useAllocationHistory();
 
   // Sync domain with user assignments when loading is complete
   useEffect(() => {
@@ -27,6 +29,15 @@ const DomainDetail = () => {
         setDomain(prevDomain => {
           if (!prevDomain) return null;
           
+          // Add to history that the user was automatically assigned
+          addAllocationHistoryEntry({
+            userId: accountableUser.id,
+            domainName: domain.title,
+            action: 'assigned',
+            timestamp: new Date().toISOString(),
+            role: 'DomainAccountable'
+          });
+          
           return {
             ...prevDomain,
             responsible: {
@@ -34,12 +45,13 @@ const DomainDetail = () => {
               firstName: accountableUser.name.split(' ')[0] || '',
               lastName: accountableUser.name.split(' ')[1] || '',
               role: accountableUser.businessRole || accountableUser.role
-            }
+            },
+            lastUpdated: new Date().toISOString()
           };
         });
       }
     }
-  }, [loading, domain, getAllUsers, setDomain]);
+  }, [loading, domain, getAllUsers, setDomain, addAllocationHistoryEntry]);
 
   const onSelectTask = (task: TaskForUI) => {
     if (domain) {

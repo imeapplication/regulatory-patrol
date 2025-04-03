@@ -1,12 +1,12 @@
 
-import React, { useEffect, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
-import { useUser } from '@/contexts/UserContext';
-import DomainInfo from '@/components/domain/DomainInfo';
-import DomainTasks from '@/components/domain/DomainTasks';
+import React from 'react';
 import { DomainForUI, TaskForUI } from '@/hooks/useDomainDetail';
-import { useDomainManagement } from '@/hooks/useDomainManagement';
+import { Card, CardContent } from '@/components/ui/card';
+import DomainInfo from './DomainInfo';
+import DomainTasks from './DomainTasks';
+import { User } from '@/types/compliance';
+import { useUser } from '@/contexts/UserContext';
+import { usePermissionChecks } from '@/hooks/usePermissionChecks';
 import { useAllocationHistory } from '@/hooks/useAllocationHistory';
 
 interface DomainContentProps {
@@ -16,146 +16,131 @@ interface DomainContentProps {
 }
 
 const DomainContent = ({ domain, setDomain, onSelectTask }: DomainContentProps) => {
-  const { toast } = useToast();
-  const { isAdmin, currentUser, getAllUsers, updateUser } = useUser();
+  const { getAllUsers, updateUser } = useUser();
+  const { checkCanManageDomain } = usePermissionChecks();
   const { addAllocationHistoryEntry } = useAllocationHistory();
-  const [assignedAccountableId, setAssignedAccountableId] = useState<string>('');
-  
-  // Initialize domain management hooks
-  const { assignDomainToAccountable, removeDomainFromAccountable } = useDomainManagement({
-    users: getAllUsers(),
-    updateUser,
-    addAllocationHistoryEntry
-  });
-  
-  // Set initial assigned accountable ID when domain loads
-  useEffect(() => {
-    if (domain?.responsible?.id) {
-      setAssignedAccountableId(domain.responsible.id);
-    } else {
-      setAssignedAccountableId('');
-      
-      // Check if this domain is assigned to any accountable in user data
-      const users = getAllUsers();
-      const accountableWithDomain = users.find(user => 
-        user.permissions.accountableDomains?.includes(domain.title)
-      );
-      
-      if (accountableWithDomain) {
-        // If found in user permissions but not in domain object, update the domain
-        const updatedDomain = {
-          ...domain,
-          responsible: {
-            id: accountableWithDomain.id,
-            firstName: accountableWithDomain.name.split(' ')[0] || '',
-            lastName: accountableWithDomain.name.split(' ')[1] || '',
-            role: accountableWithDomain.businessRole || accountableWithDomain.role
-          }
-        };
-        
-        setDomain(updatedDomain);
-        setAssignedAccountableId(accountableWithDomain.id);
-      }
-    }
-  }, [domain, getAllUsers, setDomain]);
+  const canManageDomain = checkCanManageDomain(domain.title);
 
-  const handleAccountableAssignment = (userId: string) => {
-    // Remove previous accountable if exists
-    if (assignedAccountableId && domain.title) {
-      removeDomainFromAccountable(assignedAccountableId, domain.title);
-    }
+  const handleResponsibleChange = (userId: string) => {
+    const users = getAllUsers();
+    const selectedUser = users.find(user => user.id === userId);
     
-    // Assign new accountable if not empty
-    if (userId && domain.title) {
-      assignDomainToAccountable(userId, domain.title);
-      
-      // Update domain responsible in UI
-      const users = getAllUsers();
-      const selectedUser = users.find(user => user.id === userId);
-      
-      if (selectedUser) {
-        const updatedDomain = {
-          ...domain,
-          responsible: {
-            id: selectedUser.id,
-            firstName: selectedUser.name.split(' ')[0] || '',
-            lastName: selectedUser.name.split(' ')[1] || '',
-            role: selectedUser.businessRole || selectedUser.role
+    if (!selectedUser) return;
+    
+    // Get current owner ID for tracking changes
+    const currentOwnerId = domain.responsible?.id;
+    
+    // Update domain with new responsible
+    const updatedDomain = {
+      ...domain,
+      responsible: {
+        id: selectedUser.id,
+        firstName: selectedUser.name.split(' ')[0] || selectedUser.name,
+        lastName: selectedUser.name.split(' ')[1] || '',
+        role: selectedUser.businessRole || selectedUser.role
+      },
+      lastUpdated: new Date().toISOString()
+    };
+    
+    // Update the domain state
+    setDomain(updatedDomain);
+    
+    // Track when the owner was assigned - add to history
+    const historyEntry = {
+      userId: selectedUser.id,
+      domainName: domain.title,
+      action: 'assigned' as const,
+      timestamp: new Date().toISOString(),
+      role: 'DomainAccountable' as const
+    };
+    
+    // Add allocation history
+    addAllocationHistoryEntry(historyEntry);
+    
+    // Update user permissions if they don't already have this domain
+    const updatedUser = {
+      ...selectedUser,
+      permissions: {
+        ...selectedUser.permissions,
+        accountableDomains: [
+          ...(selectedUser.permissions.accountableDomains || []).filter(d => d !== domain.title),
+          domain.title
+        ]
+      }
+    };
+    
+    // Remove domain from previous owner's permissions if there was one
+    if (currentOwnerId && currentOwnerId !== userId) {
+      const previousOwner = users.find(user => user.id === currentOwnerId);
+      if (previousOwner) {
+        const updatedPreviousOwner = {
+          ...previousOwner,
+          permissions: {
+            ...previousOwner.permissions,
+            accountableDomains: (previousOwner.permissions.accountableDomains || [])
+              .filter(d => d !== domain.title)
           }
         };
         
-        setDomain(updatedDomain);
-        setAssignedAccountableId(userId);
+        // Update previous owner
+        updateUser(updatedPreviousOwner);
+        
+        // Log removal from previous owner
+        addAllocationHistoryEntry({
+          userId: currentOwnerId,
+          domainName: domain.title,
+          action: 'removed',
+          timestamp: new Date().toISOString(),
+          role: 'DomainAccountable'
+        });
       }
-    } else {
-      // Remove accountable assignment
-      const updatedDomain = {
-        ...domain,
-        responsible: undefined
-      };
-      
-      setDomain(updatedDomain);
-      setAssignedAccountableId('');
     }
     
-    toast({
-      title: 'Domain Accountable Updated',
-      description: userId ? `Domain accountable has been assigned.` : `Domain accountable has been removed.`,
-    });
+    // Update the new owner's permissions
+    updateUser(updatedUser);
   };
 
   const handleTaskCreated = (newTask: Partial<TaskForUI>) => {
-    toast({
-      title: "Task Created",
-      description: "Task has been successfully created.",
-    });
+    if (!newTask.id || !newTask.title) return;
     
-    if (domain && newTask.title) {
-      const updatedDomain = { ...domain };
-      const newTaskObj: TaskForUI = {
-        id: `task-${Date.now()}`,
-        title: newTask.title,
-        description: newTask.description,
-        documentLink: newTask.documentLink,
-        startDate: new Date().toISOString(),
-        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        mandays: newTask.mandays || 1,
-        status: 0,
-        owner: newTask.owner
-      };
-      
-      updatedDomain.tasks = [...(updatedDomain.tasks || []), newTaskObj];
-      setDomain(updatedDomain);
-    }
+    const task: TaskForUI = {
+      id: newTask.id,
+      title: newTask.title,
+      description: newTask.description || '',
+      status: newTask.status || 0,
+      startDate: newTask.startDate || new Date().toISOString(),
+      endDate: newTask.endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      mandays: newTask.mandays || 1,
+      owner: newTask.owner
+    };
+    
+    const updatedTasks = [...(domain.tasks || []), task];
+    
+    setDomain({
+      ...domain,
+      tasks: updatedTasks
+    });
   };
 
-  const canManageTasks = isAdmin || (currentUser?.id === assignedAccountableId);
-
   return (
-    <>
-      <Card className="border-none shadow-lg mb-8 overflow-hidden animate-slide-down">
-        <CardContent className="p-0">
+    <div className="space-y-6">
+      <Card className="overflow-hidden border-none shadow-lg">
+        <CardContent className="p-6">
           <DomainInfo 
-            domain={domain as any}
-            domainName={domain?.title}
-            isAdmin={isAdmin}
-            assignedAccountableId={assignedAccountableId}
-            onAssignAccountable={handleAccountableAssignment}
+            domain={domain} 
+            canEdit={canManageDomain} 
+            onResponsibleChange={handleResponsibleChange}
           />
         </CardContent>
       </Card>
-
-      <Card className="border-none shadow-lg overflow-hidden animate-slide-up">
-        <CardContent className="p-0">
-          <DomainTasks 
-            domain={domain as any}
-            canManageTasks={canManageTasks}
-            onTaskCreated={handleTaskCreated}
-            onSelectTask={onSelectTask}
-          />
-        </CardContent>
-      </Card>
-    </>
+      
+      <DomainTasks
+        domain={domain}
+        canManageTasks={canManageDomain}
+        onTaskCreated={handleTaskCreated}
+        onSelectTask={onSelectTask}
+      />
+    </div>
   );
 };
 

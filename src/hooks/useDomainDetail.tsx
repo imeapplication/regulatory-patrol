@@ -13,6 +13,7 @@ export interface DomainForUI {
   endDate: string;
   mandays: number;
   tasks?: TaskForUI[];
+  lastUpdated?: string; // Added missing property
 }
 
 export interface TaskForUI {

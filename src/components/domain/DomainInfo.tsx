@@ -1,137 +1,163 @@
 
-import React, { useEffect, useState } from 'react';
-import { Domain } from '@/types/graphqlTypes';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { UserCheck, FileText, CalendarClock } from 'lucide-react';
-import AnimatedCounter from '@/components/ui-components/AnimatedCounter';
+import React from 'react';
+import { DomainForUI } from '@/hooks/useDomainDetail';
 import { useUser } from '@/contexts/UserContext';
+import { format } from 'date-fns';
 import { UserRole } from '@/types/compliance';
+import { useAllocationHistory } from '@/hooks/useAllocationHistory';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { DocumentText, Calendar, Users } from 'lucide-react';
 
 interface DomainInfoProps {
-  domain: Domain;
-  domainName: string | undefined;
-  isAdmin: boolean;
-  assignedAccountableId: string;
-  onAssignAccountable: (userId: string) => void;
+  domain: DomainForUI;
+  canEdit: boolean;
+  onResponsibleChange: (userId: string) => void;
 }
 
-const DomainInfo = ({
-  domain,
-  domainName,
-  isAdmin,
-  assignedAccountableId,
-  onAssignAccountable,
-}: DomainInfoProps) => {
+const DomainInfo = ({ domain, canEdit, onResponsibleChange }: DomainInfoProps) => {
   const { getAllUsers } = useUser();
-  const [selectedAccountable, setSelectedAccountable] = useState<any>(null);
+  const { getAllocationHistory } = useAllocationHistory();
+  const users = getAllUsers();
+  const allocationHistory = getAllocationHistory();
   
-  // Get users with Domain Accountable role
-  const allUsers = getAllUsers();
-  const accountableUsers = allUsers.filter(user => 
+  // Filter users who can be responsible (Domain Accountable role)
+  const accountableUsers = users.filter(user => 
     user.role === UserRole.DomainAccountable
   );
   
-  // Find and set selected accountable user when assignedAccountableId changes
-  useEffect(() => {
-    if (assignedAccountableId && assignedAccountableId !== 'none') {
-      const foundUser = accountableUsers.find(user => user.id === assignedAccountableId);
-      setSelectedAccountable(foundUser || null);
-    } else {
-      setSelectedAccountable(null);
+  // Format date helper
+  const formatDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), 'MMM d, yyyy');
+    } catch (e) {
+      return 'Invalid date';
     }
-  }, [assignedAccountableId, accountableUsers]);
-
-  const handleAccountableChange = (userId: string) => {
-    onAssignAccountable(userId === 'none' ? '' : userId);
   };
+  
+  // Find when the current responsible user was assigned
+  const getAssignmentDate = () => {
+    if (!domain.responsible?.id) return null;
+    
+    const ownerHistory = allocationHistory.filter(
+      entry => entry.userId === domain.responsible?.id && 
+              entry.domainName === domain.title && 
+              entry.action === 'assigned'
+    );
+    
+    if (ownerHistory.length > 0) {
+      // Sort by timestamp, newest first
+      ownerHistory.sort((a, b) => 
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+      return formatDate(ownerHistory[0].timestamp);
+    }
+    
+    return null;
+  };
+  
+  const assignmentDate = getAssignmentDate();
 
   return (
-    <div className="p-6 bg-white rounded-lg">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-          {domain.title}
-        </h1>
-        
-        {isAdmin && (
-          <div className="mt-4 md:mt-0 w-full md:w-64">
-            <Select
-              value={assignedAccountableId || "none"}
-              onValueChange={handleAccountableChange}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Assign Domain Accountable">
-                  {selectedAccountable ? selectedAccountable.name : "None"}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent className="bg-white z-50 shadow-md">
-                <SelectItem value="none">None</SelectItem>
-                {accountableUsers.map((user) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.name} {user.businessRole && `(${user.businessRole})`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-      </div>
-
-      {selectedAccountable && (
-        <div className="bg-blue-50 p-4 rounded-lg mb-6 border border-blue-100 animate-fade-in">
-          <div className="flex items-center gap-2 text-blue-700">
-            <UserCheck className="h-5 w-5" />
-            <p className="font-medium">
-              <span className="opacity-70">Domain Accountable:</span>{' '}
-              {selectedAccountable?.name || 'Unknown User'}{' '}
-              {selectedAccountable?.businessRole && <span className="text-sm bg-blue-100 px-2 py-1 rounded ml-1">({selectedAccountable.businessRole})</span>}
-            </p>
+    <div>
+      <h1 className="text-2xl font-bold mb-2">{domain.title}</h1>
+      {domain.description && <p className="text-gray-600 mb-6">{domain.description}</p>}
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+        <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+          <DocumentText className="w-5 h-5 text-gray-500" />
+          <div>
+            <div className="text-sm text-gray-500">Effort</div>
+            <div className="font-medium">{domain.mandays} man-days</div>
           </div>
         </div>
-      )}
 
-      <p className="text-gray-700 mb-8 leading-relaxed">
-        {domain.description || 'No description available.'}
-      </p>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
-        <Card className="border shadow-sm bg-gradient-to-br from-blue-50 to-white">
-          <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-            <div className="text-blue-500 mb-2">
-              <CalendarClock className="h-8 w-8 mx-auto mb-2" />
-              <span className="text-sm font-medium">Estimated Effort</span>
+        <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+          <Calendar className="w-5 h-5 text-gray-500" />
+          <div>
+            <div className="text-sm text-gray-500">Timeline</div>
+            <div className="font-medium">
+              {formatDate(domain.startDate)} - {formatDate(domain.endDate)}
             </div>
-            <div className="text-2xl font-bold text-blue-700">
-              <AnimatedCounter end={domain.mandays} suffix=" man-days" />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+          <Users className="w-5 h-5 text-gray-500" />
+          <div>
+            <div className="text-sm text-gray-500">Accountable</div>
+            <div className="font-medium">
+              {canEdit ? (
+                <div>
+                  <Select 
+                    value={domain.responsible?.id} 
+                    onValueChange={onResponsibleChange}
+                  >
+                    <SelectTrigger className="bg-transparent border-none shadow-none p-0 h-auto">
+                      <SelectValue placeholder="Assign accountable">
+                        {domain.responsible ? 
+                          `${domain.responsible.firstName} ${domain.responsible.lastName}`.trim() : 
+                          "Unassigned"}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="bg-white z-50 shadow-md">
+                      {accountableUsers.length > 0 ? (
+                        accountableUsers.map((user) => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {user.name} {user.businessRole && `(${user.businessRole})`}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="none" disabled>No Domain Accountable users available</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  
+                  {assignmentDate && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      Assigned since {assignmentDate}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  {domain.responsible ? 
+                    <span>
+                      {`${domain.responsible.firstName} ${domain.responsible.lastName}`.trim()}
+                      <span className="ml-2 text-xs text-gray-500">({domain.responsible.role})</span>
+                    </span> : 
+                    <span className="text-gray-400 italic">Not assigned</span>}
+                  
+                  {assignmentDate && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      Assigned since {assignmentDate}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="border shadow-sm bg-gradient-to-br from-blue-50 to-white">
-          <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-            <div className="text-green-500 mb-2">
-              <FileText className="h-8 w-8 mx-auto mb-2" />
-              <span className="text-sm font-medium">Total Tasks</span>
-            </div>
-            <div className="text-2xl font-bold text-green-700">
-              <AnimatedCounter end={domain.tasks?.length || 0} />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="border shadow-sm bg-gradient-to-br from-blue-50 to-white">
-          <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-            <div className="text-purple-500 mb-2">
-              <UserCheck className="h-8 w-8 mx-auto mb-2" />
-              <span className="text-sm font-medium">Accountable Role</span>
-            </div>
-            <div className="text-md font-semibold text-purple-700 bg-purple-50 px-3 py-1 rounded-full">
-              {selectedAccountable?.businessRole || domain.responsible?.role || 'Not assigned'}
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
+
+      {domain.documentLink && (
+        <div className="mt-4 flex items-center">
+          <DocumentText className="h-4 w-4 mr-2 text-blue-500" />
+          <a 
+            href={domain.documentLink}
+            target="_blank"
+            rel="noopener noreferrer" 
+            className="text-blue-500 hover:underline"
+          >
+            View documentation
+          </a>
+        </div>
+      )}
     </div>
   );
 };
