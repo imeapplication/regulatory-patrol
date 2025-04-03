@@ -15,6 +15,7 @@ import JsonView from "./pages/JsonView";
 import NotFound from "./pages/NotFound";
 import UserManagement from "./pages/UserManagement";
 import ComplianceRoles from "./pages/ComplianceRoles";
+import ComplianceRolesManagement from "./pages/ComplianceRolesManagement";
 import DomainAllocation from "./pages/DomainAllocation";
 import UserTimeline from "./pages/UserTimeline";
 import BusinessRoles from "./pages/BusinessRoles";
@@ -75,6 +76,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <ComplianceRoles />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/manage-compliance-roles" 
+              element={
+                <ProtectedRoute requireAdmin={true}>
+                  <ComplianceRolesManagement />
                 </ProtectedRoute>
               } 
             />
